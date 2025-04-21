@@ -17,7 +17,7 @@ export default function RouletteWheel({
 
   const categories: IngredientCategory[] = [
     "Protein",
-    "Vegetable",
+    "Vegetables",
     "Fruit",
     "Grain",
     "Dairy",

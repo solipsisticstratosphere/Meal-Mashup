@@ -14,6 +14,7 @@ import {
   RecipeInput,
   createCompleteRecipe,
 } from "@/lib/models/Recipe";
+import { generateRecipeFromIngredients } from "@/lib/huggingface";
 
 const typeDefs = `
   enum IngredientCategory {
@@ -52,7 +53,7 @@ const typeDefs = `
   type Ingredient {
     id: ID!
     name: String!
-    imageUrl: String
+    image_url: String
     category: String
     unit_of_measure: String
   }
@@ -119,7 +120,6 @@ const typeDefs = `
   }
 `;
 
-// Define resolvers
 const resolvers = {
   Query: {
     ingredients: async (
@@ -127,17 +127,13 @@ const resolvers = {
       { search, category }: { search?: string; category?: string }
     ) => {
       if (search && category) {
-        // Search by both name and category
         const ingredients = await searchIngredients(search);
         return ingredients.filter((i) => i.category === category);
       } else if (search) {
-        // Search by name
         return await searchIngredients(search);
       } else if (category) {
-        // Filter by category
         return await getIngredientsByCategory(category);
       } else {
-        // Get all ingredients
         return await getAllIngredients();
       }
     },
@@ -145,24 +141,20 @@ const resolvers = {
       return await getIngredientById(id);
     },
     popularRecipes: async (_: unknown, { limit = 6 }: { limit?: number }) => {
-      // Fetch all recipes from the database, not just featured ones
       const recipes = await getAllRecipes();
 
-      // Sort recipes by rating in descending order (null ratings at the end)
       const sortedRecipes = recipes.sort((a, b) => {
         if (a.rating === null) return 1;
         if (b.rating === null) return -1;
         return b.rating - a.rating;
       });
 
-      // Return limited number of recipes
       return sortedRecipes.slice(0, limit);
     },
     recipe: async (_: unknown, { id }: { id: string }) => {
       return await getRecipeById(id);
     },
     myRecipes: async () => {
-      // Get all recipes for now - in a real app this would filter by user
       return await getAllRecipes();
     },
   },
@@ -170,13 +162,12 @@ const resolvers = {
     ingredients: async (parent: { id: string }) => {
       const recipeIngredients = await getIngredientsForRecipe(parent.id);
 
-      // Format the ingredients to match the expected GraphQL structure
       return recipeIngredients.map((ingredient) => ({
         ingredientId: ingredient.id,
         ingredient: {
           id: ingredient.id,
           name: ingredient.name,
-          imageUrl: `/ingredients/${ingredient.name
+          image_url: `/ingredients/${ingredient.name
             .toLowerCase()
             .replace(/\s+/g, "-")}.jpg`,
           category: ingredient.category,
@@ -193,11 +184,11 @@ const resolvers = {
     votes: (parent: { rating?: number }) => {
       return parent.rating ? Math.floor(parent.rating * 10) : 0;
     },
-    // Map instructions to cookingMethod for backward compatibility
+
     cookingMethod: (parent: { instructions?: string }) => {
       return parent.instructions || "";
     },
-    // Map prep_time_minutes to preparationTime for backward compatibility
+
     preparationTime: (parent: { prep_time_minutes?: number }) => {
       return parent.prep_time_minutes || 0;
     },
@@ -210,14 +201,12 @@ const resolvers = {
       try {
         console.log("Generating recipe with ingredients:", ingredients);
 
-        // Fetch all the ingredients by their IDs
         const fetchedIngredients = await Promise.all(
           ingredients.map((id) => getIngredientById(id))
         );
 
         console.log("Fetched ingredients:", fetchedIngredients);
 
-        // Filter out any null values
         const validIngredients = fetchedIngredients.filter(
           (ing) => ing !== null
         ) as NonNullable<Ingredient>[];
@@ -228,112 +217,184 @@ const resolvers = {
           throw new Error("No valid ingredients provided");
         }
 
-        // Get names to use in the title and description
-        const ingredientNames = validIngredients.map((i) => i.name);
-        const mainIngredient = validIngredients[0];
-
-        // Generate a placeholder cooking method based on ingredients
-        let cookingMethodText = `Start by preparing all your ingredients. `;
-
-        // Simple placeholder - in the future, this will be a neural network
-        const proteins = validIngredients.filter(
-          (i) => i.category === "Protein" || i.category === "Meat"
-        );
-        const vegetables = validIngredients.filter(
-          (i) => i.category === "Vegetable" || i.category === "Vegetables"
-        );
-        const grains = validIngredients.filter(
-          (i) => i.category === "Grain" || i.category === "Grains"
+        const uniqueIngredients = validIngredients.filter(
+          (ing, index, self) => index === self.findIndex((i) => i.id === ing.id)
         );
 
-        if (proteins.length > 0) {
-          cookingMethodText += `Cook the ${proteins
-            .map((p) => p.name)
-            .join(" and ")} until properly done. `;
+        if (uniqueIngredients.length !== validIngredients.length) {
+          console.log(
+            "Removed duplicate ingredients. Using unique ingredients:",
+            uniqueIngredients
+          );
         }
 
-        if (vegetables.length > 0) {
-          cookingMethodText += `Sauté the ${vegetables
-            .map((v) => v.name)
-            .join(", ")} until tender. `;
-        }
+        const ingredientNames = uniqueIngredients.map((i) => i.name);
 
-        if (grains.length > 0) {
-          cookingMethodText += `Prepare the ${grains
-            .map((g) => g.name)
-            .join(" and ")} according to package instructions. `;
-        }
+        try {
+          const generatedRecipe = await generateRecipeFromIngredients(
+            ingredientNames
+          );
 
-        cookingMethodText += `Combine all ingredients and season to taste. Serve hot.`;
+          const recipeInput: RecipeInput = {
+            title: generatedRecipe.title,
+            description: generatedRecipe.description,
+            difficulty: generatedRecipe.difficulty.toLowerCase() as
+              | "easy"
+              | "medium"
+              | "hard",
+            prep_time_minutes: generatedRecipe.preparationTime,
+            instructions: generatedRecipe.cookingMethod,
 
-        // Create recipe data to save to database
-        const recipeData: RecipeInput = {
-          title: `${mainIngredient.name} Recipe`,
-          description: `A delicious recipe featuring ${ingredientNames.join(
-            ", "
-          )}`,
-          image_url: null,
-          prep_time_minutes: 30,
-          cook_time_minutes: 20,
-          servings: 2,
-          difficulty: "easy",
-          instructions: cookingMethodText,
-          tags: validIngredients
-            .map((i) => i.category || "Other")
-            .filter(Boolean),
-          rating: 0,
-          featured: false,
-        };
+            image_url: null,
+            cook_time_minutes: Math.round(
+              generatedRecipe.preparationTime * 0.6
+            ),
+            servings: 4,
+            tags: ingredientNames.slice(0, 3),
+            rating: null,
+            featured: false,
+          };
 
-        // Prepare ingredient data for database
-        const ingredientData = validIngredients.map((ing) => ({
-          ingredient_id: ing.id,
-          quantity: 1,
-          unit: ing.unit_of_measure || "unit",
-          notes: undefined, // Using undefined instead of null for compatibility
-        }));
+          const ingredientsInput = uniqueIngredients.map((ingredient) => {
+            const generatedIngredient = generatedRecipe.ingredients.find((gi) =>
+              gi.name.toLowerCase().includes(ingredient.name.toLowerCase())
+            );
 
-        // Save the recipe to the database
-        const savedRecipe = await createCompleteRecipe(
-          recipeData,
-          ingredientData
-        );
-        console.log("Saved recipe to database:", savedRecipe);
+            let quantity = 1;
+            let unit = "unit";
 
-        // Format the response for GraphQL
-        const formattedRecipe = {
-          id: savedRecipe.id,
-          title: savedRecipe.title,
-          description: savedRecipe.description,
-          difficulty: savedRecipe.difficulty,
-          ingredients: validIngredients.map((ing) => ({
-            ingredientId: ing.id,
-            ingredient: {
-              id: ing.id,
-              name: ing.name,
-              imageUrl: `/ingredients/${ing.name
-                .toLowerCase()
-                .replace(/\s+/g, "-")}.jpg`,
-              category: ing.category,
-            },
-            quantity: "1",
+            if (generatedIngredient?.quantity) {
+              const qtyMatch =
+                generatedIngredient.quantity.match(/(\d+\.?\d*)/);
+              if (qtyMatch && qtyMatch[1]) {
+                quantity = parseFloat(qtyMatch[1]);
+              }
+
+              const unitMatch = generatedIngredient.quantity.match(
+                /(\d+\.?\d*)\s+([a-zA-Z]+)/
+              );
+              if (unitMatch && unitMatch[2]) {
+                unit = unitMatch[2].toLowerCase();
+              }
+            }
+
+            return {
+              ingredient_id: ingredient.id,
+              quantity,
+              unit,
+              notes: generatedIngredient?.quantity || "to taste",
+            };
+          });
+
+          const createdRecipe = await createCompleteRecipe(
+            recipeInput,
+            ingredientsInput
+          );
+
+          return createdRecipe;
+        } catch (error) {
+          console.error(
+            "Error with Hugging Face API, falling back to basic generation:",
+            error
+          );
+
+          let cookingMethodText = `Start by preparing all your ingredients. `;
+
+          const proteins = validIngredients.filter(
+            (i) => i.category === "Protein" || i.category === "Meat"
+          );
+          const vegetables = validIngredients.filter(
+            (i) => i.category === "Vegetable" || i.category === "Vegetables"
+          );
+          const grains = validIngredients.filter(
+            (i) => i.category === "Grain" || i.category === "Grains"
+          );
+
+          if (proteins.length > 0) {
+            cookingMethodText += `Cook the ${proteins
+              .map((p) => p.name)
+              .join(" and ")} until properly done. `;
+          }
+
+          if (vegetables.length > 0) {
+            cookingMethodText += `Sauté the ${vegetables
+              .map((v) => v.name)
+              .join(", ")} until tender. `;
+          }
+
+          if (grains.length > 0) {
+            cookingMethodText += `Prepare the ${grains
+              .map((g) => g.name)
+              .join(" and ")} according to package instructions. `;
+          }
+
+          cookingMethodText += `Combine all ingredients and season to taste. Serve hot.`;
+
+          const recipeData: RecipeInput = {
+            title: `${validIngredients[0].name} Recipe`,
+            description: `A delicious recipe featuring ${ingredientNames.join(
+              ", "
+            )}`,
+            image_url: null,
+            prep_time_minutes: 30,
+            cook_time_minutes: 20,
+            servings: 2,
+            difficulty: "easy",
+            instructions: cookingMethodText,
+            tags: validIngredients
+              .map((i) => i.category || "Other")
+              .filter(Boolean),
+            rating: 0,
+            featured: false,
+          };
+
+          const ingredientData = validIngredients.map((ing) => ({
+            ingredient_id: ing.id,
+            quantity: 1,
             unit: ing.unit_of_measure || "unit",
-          })),
-          cookingMethod: savedRecipe.instructions,
-          preparationTime: savedRecipe.prep_time_minutes,
-          prep_time_minutes: savedRecipe.prep_time_minutes,
-          cook_time_minutes: savedRecipe.cook_time_minutes,
-          servings: savedRecipe.servings,
-          createdAt:
-            savedRecipe.created_at instanceof Date
-              ? savedRecipe.created_at.toISOString()
-              : new Date().toISOString(),
-          votes: savedRecipe.rating ? Math.floor(savedRecipe.rating * 10) : 0,
-          tags: savedRecipe.tags,
-        };
+            notes: undefined, // Using undefined instead of null for compatibility
+          }));
 
-        console.log("Returning formatted recipe:", formattedRecipe);
-        return formattedRecipe;
+          const savedRecipe = await createCompleteRecipe(
+            recipeData,
+            ingredientData
+          );
+          console.log("Saved recipe to database:", savedRecipe);
+
+          const formattedRecipe = {
+            id: savedRecipe.id,
+            title: savedRecipe.title,
+            description: savedRecipe.description,
+            difficulty: savedRecipe.difficulty,
+            ingredients: validIngredients.map((ing) => ({
+              ingredientId: ing.id,
+              ingredient: {
+                id: ing.id,
+                name: ing.name,
+                image_url: `/ingredients/${ing.name
+                  .toLowerCase()
+                  .replace(/\s+/g, "-")}.jpg`,
+                category: ing.category,
+              },
+              quantity: "1",
+              unit: ing.unit_of_measure || "unit",
+            })),
+            cookingMethod: savedRecipe.instructions,
+            preparationTime: savedRecipe.prep_time_minutes,
+            prep_time_minutes: savedRecipe.prep_time_minutes,
+            cook_time_minutes: savedRecipe.cook_time_minutes,
+            servings: savedRecipe.servings,
+            createdAt:
+              savedRecipe.created_at instanceof Date
+                ? savedRecipe.created_at.toISOString()
+                : new Date().toISOString(),
+            votes: savedRecipe.rating ? Math.floor(savedRecipe.rating * 10) : 0,
+            tags: savedRecipe.tags,
+          };
+
+          console.log("Returning formatted recipe:", formattedRecipe);
+          return formattedRecipe;
+        }
       } catch (error) {
         console.error("Error generating recipe:", error);
         throw error;
@@ -343,8 +404,6 @@ const resolvers = {
       _: unknown,
       { recipeId, vote }: { recipeId: string; vote: "UP" | "DOWN" }
     ) => {
-      // In a real application, this would update the database
-      // For now, just return a placeholder response
       return {
         id: recipeId,
         votes: vote === "UP" ? 1 : -1,
@@ -354,8 +413,6 @@ const resolvers = {
       _: unknown,
       { recipe }: { recipe: RecipeInput; ingredients: unknown[] }
     ) => {
-      // In a real application, this would create a new recipe in the database
-      // For now, just return a placeholder response
       return {
         id: "new-recipe",
         ...recipe,
@@ -366,19 +423,16 @@ const resolvers = {
   },
 };
 
-// Create executable schema
 const schema = createSchema({
   typeDefs,
   resolvers,
 });
 
-// Create a Yoga instance with the schema
 const yoga = createYoga({
   schema,
   graphqlEndpoint: "/api/graphql",
 });
 
-// Export the handler to handle all incoming requests
 export const GET = async (request: NextRequest) => {
   return yoga.handleRequest(request, {});
 };

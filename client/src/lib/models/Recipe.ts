@@ -1,4 +1,11 @@
-import { query, getById, insert, update, remove, transaction } from "../db";
+import {
+  query,
+  getById,
+  insert,
+  update,
+  remove,
+  transaction,
+} from "../db.server";
 import { PoolClient } from "pg";
 
 export interface Recipe {

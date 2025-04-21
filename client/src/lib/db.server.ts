@@ -1,7 +1,8 @@
 import { Pool, PoolClient } from "pg";
+import dotenv from "dotenv";
 
 if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config({ path: "./.env" });
+  dotenv.config({ path: "./.env" });
 }
 
 const dbConfig = {
@@ -12,6 +13,8 @@ const dbConfig = {
   database: process.env.POSTGRES_DB,
   max: 20,
   idleTimeoutMillis: 30000,
+  ssl:
+    process.env.POSTGRES_SSL === "true" ? { rejectUnauthorized: false } : false,
 };
 
 console.log("Database connection configured with:", {
@@ -19,13 +22,16 @@ console.log("Database connection configured with:", {
   host: dbConfig.host,
   port: dbConfig.port,
   database: dbConfig.database,
+  ssl: !!dbConfig.ssl,
 });
 
 const pool = new Pool(dbConfig);
 
 pool.on("error", (err: Error) => {
   console.error("Unexpected error on idle client", err);
-  process.exit(-1);
+  if (process.env.NODE_ENV !== "production") {
+    process.exit(-1);
+  }
 });
 
 export async function query<T>(text: string, params?: unknown[]): Promise<T[]> {

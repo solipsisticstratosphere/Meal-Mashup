@@ -5,7 +5,7 @@ export const GET_INGREDIENTS = gql`
     ingredients(search: $search, category: $category) {
       id
       name
-      imageUrl
+      image_url
       category
     }
   }
@@ -20,7 +20,7 @@ export const GET_POPULAR_RECIPES = gql`
         ingredient {
           id
           name
-          imageUrl
+          image_url
         }
         quantity
       }
@@ -42,7 +42,7 @@ export const GET_RECIPE = gql`
         ingredient {
           id
           name
-          imageUrl
+          image_url
           category
         }
         quantity
@@ -65,7 +65,7 @@ export const GET_MY_RECIPES = gql`
         ingredient {
           id
           name
-          imageUrl
+          image_url
         }
         quantity
       }
@@ -87,7 +87,7 @@ export const GENERATE_RECIPE = gql`
         ingredient {
           id
           name
-          imageUrl
+          image_url
           category
         }
         quantity

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Utensils, Sparkles, ArrowRight } from "lucide-react";
+import { ChevronRight, ArrowRight } from "lucide-react";
 import { FoodCard } from "../components/main/food-card";
 import { HeroPattern } from "../components/main/hero-pattern";
 import { FeatureCard } from "../components/main/feature-card";
@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 to-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16 md:pt-16 lg:pt-28">
+      <section className="relative overflow-hidden pt-8 md:pt-10 lg:pt-16">
         <HeroPattern />
 
         <div className="container mx-auto px-4 relative z-10">

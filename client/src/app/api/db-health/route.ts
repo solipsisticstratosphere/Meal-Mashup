@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { healthCheck } from "@/lib/db";
+import { healthCheck } from "@/lib/db.server";
 
 export async function GET() {
   try {
     const isHealthy = await healthCheck();
+
     return NextResponse.json({
       success: isHealthy,
       message: isHealthy
@@ -12,8 +13,12 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Database health check error:", error);
+
     return NextResponse.json(
-      { success: false, message: "Database connection error" },
+      {
+        success: false,
+        message: "Database connection error",
+      },
       { status: 500 }
     );
   }

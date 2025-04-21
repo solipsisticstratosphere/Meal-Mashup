@@ -12,6 +12,8 @@ import { useRecipeStore } from "@/store/recipeStore";
 import { useMutation } from "@apollo/client";
 import { GENERATE_RECIPE } from "@/lib/graphql";
 import { Ingredient, Recipe, DifficultyLevel } from "@/lib/types";
+import { generateRecipeFromIngredients } from "@/lib/huggingface";
+import { Toaster, toast } from "react-hot-toast";
 
 export default function CreateRecipePage() {
   const {
@@ -34,13 +36,12 @@ export default function CreateRecipePage() {
         setShowGenerationAnimation(false);
         setIsGenerating(false);
       } else {
-        createFallbackRecipe();
+        generateRecipeUsingHuggingFace();
       }
     },
     onError: (error) => {
       console.error("Error generating recipe:", error);
-
-      createFallbackRecipe();
+      generateRecipeUsingHuggingFace();
     },
   });
 
@@ -50,6 +51,45 @@ export default function CreateRecipePage() {
       const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
+  };
+
+  const generateRecipeUsingHuggingFace = async () => {
+    try {
+      const ingredientNames = selectedIngredients.map((ing) => ing.name);
+
+      const generatedRecipe = await generateRecipeFromIngredients(
+        ingredientNames
+      );
+
+      const recipe: Recipe = {
+        id: generateUuid(),
+        title: generatedRecipe.title,
+        description: generatedRecipe.description,
+        ingredients: selectedIngredients.map((ingredient) => {
+          const generatedIngredient = generatedRecipe.ingredients.find((gi) =>
+            gi.name.toLowerCase().includes(ingredient.name.toLowerCase())
+          );
+
+          return {
+            ingredientId: ingredient.id,
+            ingredient: ingredient,
+            quantity: generatedIngredient?.quantity || "to taste",
+          };
+        }),
+        cookingMethod: generatedRecipe.cookingMethod,
+        preparationTime: generatedRecipe.preparationTime,
+        difficulty: generatedRecipe.difficulty as DifficultyLevel,
+        createdAt: new Date().toISOString(),
+        votes: 0,
+      };
+
+      setCurrentRecipe(recipe);
+      setShowGenerationAnimation(false);
+      setIsGenerating(false);
+    } catch (error) {
+      console.error("Error generating recipe with Hugging Face:", error);
+      createFallbackRecipe();
+    }
   };
 
   const createFallbackRecipe = () => {
@@ -81,17 +121,51 @@ export default function CreateRecipePage() {
     if (over && over.id === "ingredients-drop-area") {
       const ingredient = active.data.current?.ingredient as Ingredient;
       if (ingredient) {
-        addIngredient(ingredient);
+        if (selectedIngredients.some((item) => item.id === ingredient.id)) {
+          toast.error(`${ingredient.name} is already in your selection!`, {
+            duration: 2000,
+            position: "top-center",
+          });
+        } else {
+          addIngredient(ingredient);
+          toast.success(`Added ${ingredient.name} to your selection!`, {
+            duration: 1500,
+            position: "top-center",
+          });
+        }
       }
     }
   };
 
   const handleSelectIngredient = (ingredient: Ingredient) => {
-    addIngredient(ingredient);
+    if (!selectedIngredients.some((item) => item.id === ingredient.id)) {
+      addIngredient(ingredient);
+      toast.success(`Added ${ingredient.name} to your selection!`, {
+        duration: 1500,
+        position: "top-center",
+      });
+    } else {
+      toast.error(`${ingredient.name} is already in your selection!`, {
+        duration: 2000,
+        position: "top-center",
+      });
+    }
   };
 
   const handleGenerateRecipe = async () => {
     if (selectedIngredients.length === 0) {
+      toast.error("Please select ingredients to generate a recipe!", {
+        duration: 3000,
+        position: "top-center",
+      });
+      return;
+    }
+
+    if (selectedIngredients.length < 2) {
+      toast.error("You need at least 2 ingredients to generate a recipe!", {
+        duration: 3000,
+        position: "top-center",
+      });
       return;
     }
 
@@ -107,7 +181,8 @@ export default function CreateRecipePage() {
         });
       } catch (error) {
         console.error("Error generating recipe:", error);
-        createFallbackRecipe();
+
+        generateRecipeUsingHuggingFace();
       }
     }, 3000);
   };
@@ -118,6 +193,7 @@ export default function CreateRecipePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <Toaster />
       <h1 className="text-3xl font-bold mb-6">Create Your Random Recipe</h1>
 
       {!currentRecipe ? (
@@ -211,9 +287,9 @@ export default function CreateRecipePage() {
               <div className="w-full max-w-md p-8 bg-gray-50 rounded-lg border border-gray-200 text-center">
                 <h2 className="text-2xl font-bold mb-4">Ready to Create?</h2>
                 <p className="text-gray-600 mb-6">
-                  Select at least one ingredient from the left panel, then click
-                  &quot;Generate Random Recipe&quot; to create your unexpected
-                  culinary masterpiece!
+                  Select at least two ingredients from the left panel, then
+                  click &quot;Generate Random Recipe&quot; to create your
+                  unexpected culinary masterpiece!
                 </p>
                 <div className="flex justify-center">
                   <svg

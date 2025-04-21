@@ -1,5 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+
+  webpack: (config, { isServer }) => {
+    // Handle server-only modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        "pg-native": false,
+      };
+    }
+    return config;
+  },
+
   images: {
     remotePatterns: [
       {

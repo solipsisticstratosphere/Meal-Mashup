@@ -1,4 +1,4 @@
-import { query, getById, insert, update, remove } from "../db";
+import { query, getById, insert, update, remove } from "../db.server";
 
 export interface Ingredient {
   id: string;

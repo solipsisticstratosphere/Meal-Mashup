@@ -1,8 +1,11 @@
 "use client";
 
 import { ReactNode, useState, useEffect } from "react";
-import Providers from "./providers";
-import { initDatabase } from "./db-init";
+import dynamic from "next/dynamic";
+
+const ApolloProviderWrapper = dynamic(() => import("@/lib/apollo-provider"), {
+  ssr: false,
+});
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -15,35 +18,19 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   useEffect(() => {
     const checkDbConnection = async () => {
       try {
-        const connected = await initDatabase();
-        setIsDbConnected(connected);
+        const response = await fetch("/api/db-health");
+        const data = await response.json();
 
-        if (!connected) {
-          setError(
-            "Failed to connect to database. Please check your configuration."
-          );
+        setIsDbConnected(data.success);
+        if (!data.success) {
+          setError(data.message || "Database connection failed");
         }
       } catch (err) {
-        console.error("Failed to initialize database:", err);
-
-        try {
-          const response = await fetch("/api/db-health");
-          const data = await response.json();
-          setIsDbConnected(data.success);
-
-          if (!data.success) {
-            setError(data.message);
-          }
-        } catch (fetchErr) {
-          console.error(
-            "Failed to check database connection via API:",
-            fetchErr
-          );
-          setError(
-            "Failed to connect to database. Please check your configuration."
-          );
-          setIsDbConnected(false);
-        }
+        console.error("Failed to check database connection:", err);
+        setError(
+          "Failed to connect to database. Please check your configuration."
+        );
+        setIsDbConnected(false);
       }
     };
 
@@ -90,5 +77,5 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     );
   }
 
-  return <Providers>{children}</Providers>;
+  return <ApolloProviderWrapper>{children}</ApolloProviderWrapper>;
 }

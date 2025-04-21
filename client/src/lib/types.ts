@@ -1,5 +1,3 @@
-
-
 export type IngredientCategory =
   | "Protein"
   | "Vegetables"
@@ -15,9 +13,9 @@ export type IngredientCategory =
 export interface Ingredient {
   id: string;
   name: string;
-  imageUrl: string;
+  image_url: string;
   category: IngredientCategory;
-  commonPairings?: string[]; 
+  commonPairings?: string[];
 }
 
 export interface RecipeIngredient {
@@ -34,17 +32,18 @@ export interface Recipe {
   description?: string;
   image_url?: string;
   ingredients: RecipeIngredient[];
-  cookingMethod: string; 
-  preparationTime: number; 
+  cookingMethod: string;
+  preparationTime: number;
   difficulty: DifficultyLevel;
   createdAt: Date | string;
   votes: number;
-  userId?: string; 
+  userId?: string;
+}
 
 export interface User {
   id: string;
   email: string;
-  savedRecipes: string[]; 
+  savedRecipes: string[];
   votedRecipes: {
     recipeId: string;
     vote: "up" | "down";
@@ -54,14 +53,14 @@ export interface User {
 
 export interface Session {
   id: string;
-  selectedIngredients: string[]; 
+  selectedIngredients: string[];
   currentRecipe?: string;
   temporaryVotes: {
     recipeId: string;
     vote: "up" | "down";
   }[];
   createdAt: Date;
-  expiresAt: Date; 
+  expiresAt: Date;
 }
 
 export type VoteType = "up" | "down";

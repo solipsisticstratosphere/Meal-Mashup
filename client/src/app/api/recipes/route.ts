@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Include ingredients if requested
       if (withIngredients) {
         const ingredients = await getIngredientsForRecipe(id);
         return NextResponse.json({ ...recipe, ingredients });

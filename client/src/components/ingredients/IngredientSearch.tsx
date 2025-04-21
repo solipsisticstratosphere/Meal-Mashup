@@ -105,10 +105,10 @@ export default function IngredientSearch({
             className="p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition cursor-pointer"
           >
             <div className="h-20 mb-2 bg-gray-200 rounded relative overflow-hidden">
-              {ingredient.imageUrl && (
+              {ingredient.image_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={ingredient.imageUrl}
+                  src={ingredient.image_url}
                   alt={ingredient.name}
                   className="w-full h-full object-cover"
                 />
@@ -125,7 +125,7 @@ export default function IngredientSearch({
 
         {data?.ingredients?.length === 0 && searchTerm && (
           <div className="col-span-full text-center py-8 text-gray-500">
-            No ingredients found for "{searchTerm}"
+            No ingredients found for &quot;{searchTerm}&quot;
           </div>
         )}
       </div>
