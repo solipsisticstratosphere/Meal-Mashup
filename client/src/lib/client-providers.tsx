@@ -40,7 +40,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   if (isDbConnected === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+        <div className=" p-8 rounded-lg shadow-lg max-w-md w-full">
           <div className="flex items-center justify-center mb-4">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-rose-500"></div>
           </div>
@@ -53,7 +53,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+        <div className=" p-8 rounded-lg shadow-lg max-w-md w-full">
           <div className="flex items-center justify-center mb-4 text-red-500">
             <svg
               xmlns="http://www.w3.org/2000/svg"

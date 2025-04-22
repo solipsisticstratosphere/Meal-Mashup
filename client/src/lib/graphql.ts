@@ -7,6 +7,7 @@ export const GET_INGREDIENTS = gql`
       name
       image_url
       category
+      unit_of_measure
     }
   }
 `;
@@ -21,6 +22,7 @@ export const GET_POPULAR_RECIPES = gql`
           id
           name
           image_url
+          unit_of_measure
         }
         quantity
       }
@@ -44,6 +46,7 @@ export const GET_RECIPE = gql`
           name
           image_url
           category
+          unit_of_measure
         }
         quantity
       }
@@ -66,6 +69,7 @@ export const GET_MY_RECIPES = gql`
           id
           name
           image_url
+          unit_of_measure
         }
         quantity
       }
@@ -89,6 +93,7 @@ export const GENERATE_RECIPE = gql`
           name
           image_url
           category
+          unit_of_measure
         }
         quantity
       }

@@ -171,6 +171,7 @@ const resolvers = {
             .toLowerCase()
             .replace(/\s+/g, "-")}.jpg`,
           category: ingredient.category,
+          unit_of_measure: ingredient.unit_of_measure || ingredient.unit || "",
         },
         quantity: ingredient.quantity.toString(),
         unit: ingredient.unit,
@@ -232,7 +233,11 @@ const resolvers = {
 
         try {
           const generatedRecipe = await generateRecipeFromIngredients(
-            ingredientNames
+            uniqueIngredients.map((ing) => ({
+              id: ing.id,
+              name: ing.name,
+              unit_of_measure: ing.unit_of_measure,
+            }))
           );
 
           const recipeInput: RecipeInput = {
@@ -261,7 +266,7 @@ const resolvers = {
             );
 
             let quantity = 1;
-            let unit = "unit";
+            let unit = ingredient.unit_of_measure || "unit";
 
             if (generatedIngredient?.quantity) {
               const qtyMatch =

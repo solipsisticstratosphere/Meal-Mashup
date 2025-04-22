@@ -10,10 +10,37 @@ interface RecipeResponse {
   difficulty: "Easy" | "Medium" | "Hard";
 }
 
-export const generateRecipePrompt = (ingredients: string[]): string => {
-  return `Create a detailed recipe using only these ingredients: ${ingredients.join(
-    ", "
-  )}.
+export interface IngredientWithUnit {
+  id: string;
+  name: string;
+  unit_of_measure?: string | null;
+}
+
+export const generateRecipePrompt = (
+  ingredients: string[] | IngredientWithUnit[]
+): string => {
+  const hasUnits =
+    ingredients.length > 0 &&
+    typeof ingredients[0] !== "string" &&
+    "name" in ingredients[0];
+
+  let ingredientsText = "";
+
+  if (hasUnits) {
+    const typedIngredients = ingredients as IngredientWithUnit[];
+    ingredientsText = typedIngredients
+      .map((ing) => {
+        if (ing.unit_of_measure) {
+          return `${ing.name} (measured in ${ing.unit_of_measure})`;
+        }
+        return ing.name;
+      })
+      .join(", ");
+  } else {
+    ingredientsText = (ingredients as string[]).join(", ");
+  }
+
+  return `Create a detailed recipe using only these ingredients: ${ingredientsText}.
 
 The recipe should include:
 1. A creative title
@@ -23,189 +50,245 @@ The recipe should include:
 5. Estimated preparation time in minutes
 6. Difficulty level (Easy, Medium, or Hard)
 
-Format the response as JSON with the following structure:
+Respond only in valid JSON. Do not include explanations or comments.
+
+Format the response as:
 {
   "title": "Recipe Title",
   "description": "Short description",
   "ingredients": [
     {"name": "ingredient name", "quantity": "amount"}
   ],
-  "cookingMethod": "Step-by-step instructions",
-  "preparationTime": 30,
-  "difficulty": "Medium"
-}`;
+  "cookingMethod": [
+    "Step 1 instruction text.",
+    "Step 2 instruction text.",
+    "Step 3 instruction text."
+    // ... add all steps here, each as a separate string in the array
+  ],
+  "preparationTime": "preparation time in minutes",
+  "difficulty": "difficulty level"
+}
+Ensure each element in the "cookingMethod" array is a full, complete instruction step. Do not include step numbers (like "1.", "2.") within the strings in the array, as the rendering function will add them.`;
 };
 
+function extractJSON(text: string): Partial<RecipeResponse> | null {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const jsonText = jsonMatch[0];
+
+      const fixedJsonText = jsonText.replace(
+        /"cookingMethod"\s*:\s*\{(?:"[^"]*"(?:,|,\s*)?)+\}/g,
+        (match) => {
+          const itemsMatch = match.match(/"[^"]*"/g);
+          if (itemsMatch && itemsMatch.length > 1) {
+            const items = itemsMatch.slice(1);
+            return `"cookingMethod": ${items.join("\\n")}`;
+          }
+          return match;
+        }
+      );
+
+      const parsed = JSON.parse(fixedJsonText);
+
+      if (Array.isArray(parsed.cookingMethod)) {
+        parsed.cookingMethod = parsed.cookingMethod.join("\n");
+      }
+
+      return parsed;
+    } catch (err) {
+      console.error("Standard JSON parse error:", err);
+    }
+  }
+
+  const nonStandardMatch = text.match(/\{(?:"[^"]*"(?:,|,\s*)?)+\}/);
+  if (nonStandardMatch) {
+    try {
+      const stepsMatch = nonStandardMatch[0].match(/"([^"]*)"/g);
+      if (stepsMatch) {
+        const steps = stepsMatch.map((step: string) =>
+          step.replace(/"/g, "").trim()
+        );
+
+        return {
+          title: `Recipe with ${steps.length} Steps`,
+          description: "A recipe created from the provided ingredients",
+          cookingMethod: steps.join("\n"),
+          preparationTime: 30,
+          difficulty: "Medium",
+        };
+      }
+    } catch (err) {
+      console.error("Non-standard format parse error:", err);
+    }
+  }
+
+  const instructionsMatch = text.match(/\d+\.\s+[^\n\d]+/g);
+  if (instructionsMatch && instructionsMatch.length > 0) {
+    return {
+      cookingMethod: instructionsMatch.join("\n"),
+    };
+  }
+
+  return null;
+}
+
 export const generateRecipeFromIngredients = async (
-  ingredients: string[]
+  ingredients: string[] | IngredientWithUnit[]
 ): Promise<RecipeResponse> => {
   try {
-    const apiToken =
-      process.env.HUGGINGFACE || process.env.NEXT_PUBLIC_HUGGINGFACE_TOKEN;
+    const apiKey =
+      process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
-    if (!apiToken) {
-      console.error("Missing Hugging Face API token");
-      throw new Error("Missing API token");
+    if (!apiKey) {
+      console.error("Missing Gemini API key");
+      throw new Error("Missing API key");
     }
 
     const prompt = generateRecipePrompt(ingredients);
 
-    const apiUrl = "https://api-inference.huggingface.co/models/gpt2/gpt2";
+    // Using gemini-1.5-flash-002 model
+    const apiUrl =
+      "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-002:generateContent";
 
-    console.log("Generating recipe with ingredients:", ingredients);
+    const ingredientNames =
+      Array.isArray(ingredients) &&
+      ingredients.length > 0 &&
+      typeof ingredients[0] !== "string"
+        ? (ingredients as IngredientWithUnit[]).map((ing) => ing.name)
+        : (ingredients as string[]);
 
-    const response = await fetch(apiUrl, {
+    console.log("Generating recipe with ingredients:", ingredientNames);
+
+    const response = await fetch(`${apiUrl}?key=${apiKey}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 512,
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
           temperature: 0.7,
-          top_p: 0.95,
-          return_full_text: false,
+          topP: 0.95,
+          maxOutputTokens: 500,
         },
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("Hugging Face API error:", error);
+      console.error("Gemini API error:", error);
       throw new Error(`API error: ${response.status}`);
     }
 
-    try {
-      const data = await response.json();
-      const generatedText = data[0]?.generated_text || "";
-      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-
-      if (jsonMatch) {
-        const recipeData = JSON.parse(jsonMatch[0]);
-
-        return {
-          title: recipeData.title || `${ingredients[0] || "Mixed"} Dish`,
-          description:
-            recipeData.description ||
-            `A dish featuring ${ingredients.join(", ")}`,
-          ingredients: Array.isArray(recipeData.ingredients)
-            ? recipeData.ingredients
-            : ingredients.map((ing) => ({ name: ing, quantity: "to taste" })),
-          cookingMethod: recipeData.cookingMethod || "No instructions provided",
-          preparationTime: parseInt(recipeData.preparationTime) || 30,
-          difficulty:
-            (recipeData.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
-        };
-      } else {
-        throw new Error("No valid JSON found in response");
-      }
-    } catch (parseError) {
-      console.error("Error parsing primary model response:", parseError);
-
-      return await generateBackupRecipe(ingredients);
-    }
-  } catch (error) {
-    console.error("Error generating recipe:", error);
-
-    try {
-      return await generateBackupRecipe(ingredients);
-    } catch (backupError) {
-      console.error("Backup model also failed:", backupError);
-
-      return generateFallbackRecipe(ingredients);
-    }
-  }
-};
-
-async function generateBackupRecipe(
-  ingredients: string[]
-): Promise<RecipeResponse> {
-  const apiToken =
-    process.env.HUGGINGFACE || process.env.NEXT_PUBLIC_HUGGINGFACE_TOKEN;
-
-  if (!apiToken) {
-    throw new Error("Missing API token");
-  }
-
-  const apiUrl = "https://api-inference.huggingface.co/models/distilgpt2";
-
-  const prompt = generateRecipePrompt(ingredients);
-
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: 512,
-        temperature: 0.7,
-        return_full_text: false,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Backup API error: ${response.status}`);
-  }
-
-  try {
     const data = await response.json();
-    const generatedText = data[0]?.generated_text || "";
+    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+    console.log("Raw model output:", generatedText);
 
-    if (jsonMatch) {
-      const recipeData = JSON.parse(jsonMatch[0]);
+    let recipeData = extractJSON(generatedText);
 
+    if (!recipeData || typeof recipeData.cookingMethod === "object") {
+      try {
+        const cookingMethodMatch = generatedText.match(
+          /"cookingMethod":\s*\{(?:"[^"]*"(?:,|,\s*)?)+\}/
+        );
+        if (cookingMethodMatch) {
+          const stepsMatch = cookingMethodMatch[0].match(/"([^"]*)"/g);
+          if (stepsMatch && stepsMatch.length > 1) {
+            const steps = stepsMatch
+              .slice(1)
+              .map((step: string) => step.replace(/"/g, "").trim());
+
+            const fixedJson = generatedText.replace(
+              /"cookingMethod":\s*\{(?:"[^"]*"(?:,|,\s*)?)+\}/,
+              `"cookingMethod": "${steps.join("\\n")}"`
+            );
+
+            try {
+              const jsonMatch = fixedJson.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                recipeData = JSON.parse(jsonMatch[0]);
+              }
+            } catch (err) {
+              console.error("Fixed JSON parse error:", err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Manual cookingMethod fix error:", err);
+      }
+    }
+
+    if (recipeData) {
       return {
-        title: recipeData.title || `${ingredients[0] || "Mixed"} Recipe`,
+        title: recipeData.title || `${ingredientNames[0] || "Mixed"} Dish`,
         description:
           recipeData.description ||
-          `A dish featuring ${ingredients.join(", ")}`,
+          `A dish featuring ${ingredientNames.join(", ")}`,
         ingredients: Array.isArray(recipeData.ingredients)
           ? recipeData.ingredients
-          : ingredients.map((ing) => ({ name: ing, quantity: "to taste" })),
-        cookingMethod: recipeData.cookingMethod || "No instructions provided",
-        preparationTime: parseInt(recipeData.preparationTime) || 30,
+          : ingredientNames.map((ing) => ({ name: ing, quantity: "to taste" })),
+        cookingMethod:
+          typeof recipeData.cookingMethod === "string"
+            ? recipeData.cookingMethod
+            : Array.isArray(recipeData.cookingMethod)
+            ? (recipeData.cookingMethod as string[]).join("\n")
+            : "No instructions provided",
+        preparationTime: recipeData.preparationTime
+          ? parseInt(String(recipeData.preparationTime))
+          : 30,
         difficulty:
           (recipeData.difficulty as "Easy" | "Medium" | "Hard") || "Medium",
       };
     } else {
-      throw new Error("No valid JSON found in backup model response");
+      console.error("Failed to extract valid JSON from response");
+      return generateFallbackRecipe(ingredientNames);
     }
-  } catch (parseError) {
-    console.error("Error parsing backup model response:", parseError);
-    throw parseError;
-  }
-}
+  } catch (error) {
+    console.error("Error generating recipe:", error);
 
-function generateCookingMethod(ingredients: string[]): string {
+    const fallbackIngredientNames =
+      Array.isArray(ingredients) &&
+      ingredients.length > 0 &&
+      typeof ingredients[0] !== "string"
+        ? (ingredients as IngredientWithUnit[]).map((ing) => ing.name)
+        : (ingredients as string[]);
+
+    return generateFallbackRecipe(fallbackIngredientNames);
+  }
+};
+
+function generateCookingMethod(ingredientNames: string[]): string {
   const steps = ["Start by preparing all your ingredients."];
 
-  const hasProtein = ingredients.some((ing) =>
+  const hasProtein = ingredientNames.some((ing) =>
     ["chicken", "beef", "pork", "fish", "shrimp", "tofu"].some((protein) =>
       ing.toLowerCase().includes(protein)
     )
   );
 
-  const hasVegetable = ingredients.some((ing) =>
+  const hasVegetable = ingredientNames.some((ing) =>
     ["carrot", "onion", "pepper", "tomato", "spinach", "lettuce"].some((veg) =>
       ing.toLowerCase().includes(veg)
     )
   );
 
-  const hasGrain = ingredients.some((ing) =>
+  const hasGrain = ingredientNames.some((ing) =>
     ["pasta", "rice", "noodle", "bread"].some((grain) =>
       ing.toLowerCase().includes(grain)
     )
   );
 
-  const hasHerb = ingredients.some((ing) =>
+  const hasHerb = ingredientNames.some((ing) =>
     ["mint", "basil", "thyme", "oregano", "parsley"].some((herb) =>
       ing.toLowerCase().includes(herb)
     )
@@ -235,13 +318,22 @@ function generateCookingMethod(ingredients: string[]): string {
   return steps.join("\n");
 }
 
-function generateFallbackRecipe(ingredients: string[]): RecipeResponse {
+function generateFallbackRecipe(
+  ingredients: string[] | IngredientWithUnit[]
+): RecipeResponse {
+  const ingredientNames =
+    Array.isArray(ingredients) &&
+    ingredients.length > 0 &&
+    typeof ingredients[0] !== "string"
+      ? (ingredients as IngredientWithUnit[]).map((ing) => ing.name)
+      : (ingredients as string[]);
+
   return {
-    title: `${ingredients[0] || "Mixed"} ${
-      ingredients.length > 1 ? `with ${ingredients[1]}` : ""
+    title: `${ingredientNames[0] || "Mixed"} ${
+      ingredientNames.length > 1 ? `with ${ingredientNames[1]}` : ""
     } Delight`,
-    description: `A creative dish featuring ${ingredients.join(", ")}`,
-    ingredients: ingredients.map((ing) => ({
+    description: `A creative dish featuring ${ingredientNames.join(", ")}`,
+    ingredients: ingredientNames.map((ing) => ({
       name: ing,
       quantity:
         ing.toLowerCase().includes("salt") ||
@@ -260,7 +352,7 @@ function generateFallbackRecipe(ingredients: string[]): RecipeResponse {
                 : "portions"
             }`,
     })),
-    cookingMethod: generateCookingMethod(ingredients),
+    cookingMethod: generateCookingMethod(ingredientNames),
     preparationTime: Math.floor(Math.random() * 20) + 20,
     difficulty: ["Easy", "Medium", "Hard"][Math.floor(Math.random() * 3)] as
       | "Easy"

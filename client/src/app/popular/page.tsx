@@ -2,52 +2,65 @@
 
 import { useQuery } from "@apollo/client";
 import { GET_POPULAR_RECIPES } from "@/lib/graphql";
-import RecipeCard from "@/components/recipe/RecipeCard";
+import RecipeCardCompact from "@/components/recipe/RecipeCardCompact";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
-import { Recipe } from "@/lib/types";
+import type { Recipe } from "@/lib/types";
+import { ChefHat, PlusCircle } from "lucide-react";
 
 export default function PopularRecipesPage() {
   const { data, loading, error } = useQuery(GET_POPULAR_RECIPES, {
-    variables: { limit: 10 },
+    variables: { limit: 20 },
+    fetchPolicy: "network-only",
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-4 py-12 max-w-7xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
-          <h1 className="text-3xl font-bold">Popular Recipes</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
+            Popular Recipes
+          </h1>
+          <p className="text-gray-600 mt-3 text-lg">
             Recipes are sorted by popularity based on user votes
           </p>
         </div>
         <Link href="/create-recipe">
-          <Button>Create Your Own</Button>
+          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl shadow-md  transition-all">
+            <PlusCircle className="w-5 h-5 mr-2" />
+            Create Your Own
+          </Button>
         </Link>
       </div>
 
       {loading && (
-        <div className="flex flex-col justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600">Loading recipes from database...</p>
+        <div className="flex flex-col justify-center items-center h-80 bg-gradient-to-b from-rose-50 to-white rounded-2xl shadow-md border border-gray-100">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-500 mb-6"></div>
+          <p className="text-gray-600 text-lg">Loading delicious recipes...</p>
         </div>
       )}
 
       {error && (
-        <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
-          Error loading popular recipes: {error.message}
+        <div className="p-6 mb-6 text-red-700 bg-red-50 rounded-xl border border-red-100 shadow-sm">
+          <h3 className="font-semibold text-lg mb-2">Something went wrong</h3>
+          <p>Error loading popular recipes: {error.message}</p>
         </div>
       )}
 
       {data?.popularRecipes?.length === 0 && !loading && (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <h2 className="text-2xl font-bold mb-2">No Recipes Found</h2>
-          <p className="text-gray-600 mb-6">
+        <div className="text-center py-20 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-md border border-amber-100">
+          <ChefHat className="w-20 h-20 mx-auto text-amber-400 mb-4" />
+          <h2 className="text-2xl font-bold mb-3 text-amber-800">
+            No Recipes Found
+          </h2>
+          <p className="text-gray-700 mb-8 max-w-md mx-auto">
             It seems there are no recipes in the database yet. Be the first to
             create one!
           </p>
           <Link href="/create-recipe">
-            <Button>Create a Recipe</Button>
+            <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition-all">
+              Create a Recipe
+            </Button>
           </Link>
         </div>
       )}
@@ -55,7 +68,12 @@ export default function PopularRecipesPage() {
       {data?.popularRecipes?.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {data.popularRecipes.map((recipe: Recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <div
+              key={recipe.id}
+              className="transform transition-transform hover:scale-[1.02] hover:shadow-2xl"
+            >
+              <RecipeCardCompact recipe={recipe} />
+            </div>
           ))}
         </div>
       )}

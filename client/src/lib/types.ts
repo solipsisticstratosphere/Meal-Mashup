@@ -15,6 +15,7 @@ export interface Ingredient {
   name: string;
   image_url: string;
   category: IngredientCategory;
+  unit_of_measure?: string;
   commonPairings?: string[];
 }
 

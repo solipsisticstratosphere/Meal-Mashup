@@ -59,7 +59,7 @@ export default function MyRecipes() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-16">
+    <div className="min-h-screen  pb-16">
       <section className="pt-10 md:pt-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
