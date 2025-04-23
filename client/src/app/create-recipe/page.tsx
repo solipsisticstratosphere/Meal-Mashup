@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core";
 import IngredientSearch from "@/components/ingredients/IngredientSearch";
 import IngredientCard from "@/components/ingredients/IngredientCard";
@@ -14,6 +14,7 @@ import { GENERATE_RECIPE } from "@/lib/graphql";
 import type { Ingredient, Recipe, DifficultyLevel } from "@/lib/types";
 import { generateRecipeFromIngredients } from "@/lib/huggingface";
 import { Toaster, toast } from "react-hot-toast";
+import { motion, useAnimation } from "framer-motion";
 
 export default function CreateRecipePage() {
   const {
@@ -28,22 +29,16 @@ export default function CreateRecipePage() {
   } = useRecipeStore();
 
   const [showGenerationAnimation, setShowGenerationAnimation] = useState(false);
+  const [animatingIngredients, setAnimatingIngredients] = useState<
+    Ingredient[]
+  >([]);
+  const [ingredientPositions, setIngredientPositions] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
+  const [flyingComplete, setFlyingComplete] = useState(false);
+  const wheelRef = useRef<HTMLDivElement>(null);
 
-  const [generateRecipeMutation] = useMutation(GENERATE_RECIPE, {
-    onCompleted: (data) => {
-      if (data.generateRecipe) {
-        setCurrentRecipe(data.generateRecipe);
-        setShowGenerationAnimation(false);
-        setIsGenerating(false);
-      } else {
-        generateRecipeUsingHuggingFace();
-      }
-    },
-    onError: (error) => {
-      console.error("Error generating recipe:", error);
-      generateRecipeUsingHuggingFace();
-    },
-  });
+  const [generateRecipeMutation] = useMutation(GENERATE_RECIPE);
 
   const generateUuid = () => {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -83,12 +78,10 @@ export default function CreateRecipePage() {
         votes: 0,
       };
 
-      setCurrentRecipe(recipe);
-      setShowGenerationAnimation(false);
-      setIsGenerating(false);
+      return recipe;
     } catch (error) {
       console.error("Error generating recipe with Hugging Face:", error);
-      createFallbackRecipe();
+      return null;
     }
   };
 
@@ -110,9 +103,7 @@ export default function CreateRecipePage() {
       votes: 0,
     };
 
-    setCurrentRecipe(mockRecipe);
-    setShowGenerationAnimation(false);
-    setIsGenerating(false);
+    return mockRecipe;
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -169,27 +160,104 @@ export default function CreateRecipePage() {
       return;
     }
 
-    setIsGenerating(true);
-    setShowGenerationAnimation(true);
-
-    setTimeout(async () => {
-      try {
-        await generateRecipeMutation({
-          variables: {
-            ingredients: selectedIngredients.map((i) => i.id),
-          },
-        });
-      } catch (error) {
-        console.error("Error generating recipe:", error);
-
-        generateRecipeUsingHuggingFace();
+    const positions: Record<
+      string,
+      { x: number; y: number; width: number; height: number }
+    > = {};
+    selectedIngredients.forEach((ingredient) => {
+      const element = document.getElementById(`ingredient-${ingredient.id}`);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        positions[ingredient.id] = {
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
       }
-    }, 3000);
+    });
+    setIngredientPositions(positions);
+
+    setIsGenerating(true);
+    setAnimatingIngredients([...selectedIngredients]);
+
+    setTimeout(() => {
+      setFlyingComplete(true);
+      setShowGenerationAnimation(true);
+
+      const animationStartTime = Date.now();
+      const MINIMUM_ANIMATION_TIME = 10000;
+
+      const generateRecipe = async () => {
+        let recipe: Recipe | null = null;
+
+        try {
+          const result = await generateRecipeMutation({
+            variables: {
+              ingredients: selectedIngredients.map((i) => i.id),
+            },
+          });
+
+          if (result.data?.generateRecipe) {
+            recipe = result.data.generateRecipe;
+          } else {
+            recipe = await generateRecipeUsingHuggingFace();
+          }
+        } catch (error) {
+          console.error("Error generating recipe:", error);
+
+          recipe = await generateRecipeUsingHuggingFace();
+        }
+
+        if (!recipe) {
+          recipe = createFallbackRecipe();
+        }
+
+        const elapsedTime = Date.now() - animationStartTime;
+
+        if (elapsedTime >= MINIMUM_ANIMATION_TIME) {
+          showFinalRecipe(recipe);
+        } else {
+          const remainingTime = MINIMUM_ANIMATION_TIME - elapsedTime;
+          console.log(`Waiting ${remainingTime}ms to complete the animation`);
+
+          setTimeout(() => {
+            showFinalRecipe(recipe);
+          }, remainingTime);
+        }
+      };
+
+      const showFinalRecipe = (recipe: Recipe) => {
+        setCurrentRecipe(recipe);
+        setShowGenerationAnimation(false);
+        setIsGenerating(false);
+        setAnimatingIngredients([]);
+        setFlyingComplete(false);
+      };
+
+      generateRecipe();
+    }, 1000);
   };
 
   const handleGenerateNewRecipe = () => {
     setCurrentRecipe(null);
+    setFlyingComplete(false);
   };
+
+  const handleRemoveIngredient = (id: string) => {
+    removeIngredient(id);
+  };
+
+  const getWheelPosition = () => {
+    if (!wheelRef.current) return { x: 0, y: 0 };
+    const rect = wheelRef.current.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  };
+
+  const wheelPosition = getWheelPosition();
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-7xl">
@@ -269,14 +337,21 @@ export default function CreateRecipePage() {
                       <p className="text-sm mt-1">or search and click to add</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 relative">
                       {selectedIngredients.map((ingredient) => (
                         <IngredientCard
                           key={ingredient.id}
                           ingredient={ingredient}
                           dragDisabled={true}
-                          onClick={() => removeIngredient(ingredient.id)}
-                          className="cursor-pointer transform transition-transform hover:scale-105 hover:shadow-md"
+                          onClick={() => handleRemoveIngredient(ingredient.id)}
+                          className={`cursor-pointer transform transition-transform hover:scale-105 hover:shadow-md ${
+                            animatingIngredients.some(
+                              (ai) => ai.id === ingredient.id
+                            )
+                              ? "invisible"
+                              : ""
+                          }`}
+                          id={`ingredient-${ingredient.id}`}
                         />
                       ))}
                     </div>
@@ -287,7 +362,11 @@ export default function CreateRecipePage() {
                   <Button
                     onClick={handleGenerateRecipe}
                     disabled={selectedIngredients.length === 0 || isGenerating}
-                    isLoading={isGenerating && !showGenerationAnimation}
+                    isLoading={
+                      isGenerating &&
+                      !showGenerationAnimation &&
+                      !animatingIngredients.length
+                    }
                     fullWidth
                     size="lg"
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-4 rounded-xl text-lg font-medium shadow-lg hover:shadow-xl transition-all"
@@ -305,14 +384,23 @@ export default function CreateRecipePage() {
 
           <div className="flex flex-col items-center justify-center">
             {showGenerationAnimation ? (
-              <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+              <div
+                className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
+                ref={wheelRef}
+              >
                 <h3 className="text-xl font-semibold text-center mb-6 text-amber-700">
                   Creating Your Recipe...
                 </h3>
-                <RouletteWheel isSpinning={true} onComplete={() => {}} />
+                <RouletteWheel
+                  isSpinning={flyingComplete}
+                  onComplete={() => {}}
+                />
               </div>
             ) : (
-              <div className="w-full max-w-md p-10 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 text-center shadow-xl">
+              <div
+                className="w-full max-w-md p-10 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 text-center shadow-xl"
+                ref={wheelRef}
+              >
                 <div className="bg-amber-500 text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -377,6 +465,124 @@ export default function CreateRecipePage() {
           </div>
         </div>
       )}
+
+      {/* Flying Ingredients Animation Layer */}
+      {animatingIngredients.length > 0 && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          {animatingIngredients.map((ingredient, index) => (
+            <FlyingIngredient
+              key={ingredient.id}
+              ingredient={ingredient}
+              index={index}
+              startX={ingredientPositions[ingredient.id]?.x || wheelPosition.x}
+              startY={ingredientPositions[ingredient.id]?.y || wheelPosition.y}
+              width={ingredientPositions[ingredient.id]?.width || 0}
+              height={ingredientPositions[ingredient.id]?.height || 0}
+              targetX={wheelPosition.x}
+              targetY={wheelPosition.y}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+interface FlyingIngredientProps {
+  ingredient: Ingredient;
+  index: number;
+  startX: number;
+  startY: number;
+  width: number;
+  height: number;
+  targetX: number;
+  targetY: number;
+  onComplete?: () => void;
+}
+
+const FlyingIngredient = ({
+  ingredient,
+  index,
+  startX,
+  startY,
+  width,
+  height,
+  targetX,
+  targetY,
+  onComplete,
+}: FlyingIngredientProps) => {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls
+      .start({
+        x: targetX - startX,
+        y: targetY - startY,
+        scale: 0.5,
+        opacity: 0,
+        transition: {
+          duration: 1,
+          delay: index * 0.1,
+          ease: "easeInOut",
+        },
+      })
+      .then(() => {
+        onComplete?.();
+      });
+  }, [controls, startX, startY, targetX, targetY, index, onComplete]);
+
+  const getCategoryColor = (category: string): string => {
+    const colors: Record<string, string> = {
+      Protein: "bg-red-100 text-red-800",
+      Vegetable: "bg-green-100 text-green-800",
+      Fruit: "bg-purple-100 text-purple-800",
+      Grain: "bg-yellow-100 text-yellow-800",
+      Dairy: "bg-blue-100 text-blue-800",
+      Spice: "bg-orange-100 text-orange-800",
+      Herb: "bg-emerald-100 text-emerald-800",
+      Oil: "bg-amber-100 text-amber-800",
+      Condiment: "bg-pink-100 text-pink-800",
+      Other: "bg-gray-100 text-gray-800",
+    };
+
+    return colors[category] || "bg-gray-100 text-gray-800";
+  };
+
+  return (
+    <motion.div
+      initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+      animate={controls}
+      className="fixed z-50"
+      style={{
+        position: "fixed",
+        left: startX,
+        top: startY,
+      }}
+    >
+      <div
+        className="border rounded-lg shadow-md bg-white overflow-hidden"
+        style={{ width: `${width}px`, height: `${height}px` }}
+      >
+        <div className="relative h-28 w-full">
+          <img
+            src={ingredient.image_url || "/placeholder-image.jpg"}
+            alt={ingredient.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </div>
+        <div className="p-3">
+          <h3 className="font-medium text-gray-900 mb-1 text-sm">
+            {ingredient.name}
+          </h3>
+          <span
+            className={`inline-block px-2 py-1 text-xs rounded-full ${getCategoryColor(
+              ingredient.category
+            )}`}
+          >
+            {ingredient.category}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};

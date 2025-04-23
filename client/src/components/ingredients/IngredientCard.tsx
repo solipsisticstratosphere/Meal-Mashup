@@ -12,6 +12,7 @@ interface IngredientCardProps {
   isSelected?: boolean;
   dragDisabled?: boolean;
   className?: string;
+  id?: string;
 }
 
 export default function IngredientCard({
@@ -20,6 +21,7 @@ export default function IngredientCard({
   isSelected = false,
   dragDisabled = false,
   className,
+  id,
 }: IngredientCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -63,6 +65,7 @@ export default function IngredientCard({
         className
       )}
       onClick={onClick}
+      id={id}
     >
       <div className="relative h-28 w-full">
         <Image

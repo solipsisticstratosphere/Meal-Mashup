@@ -178,7 +178,7 @@ export default function RecipeCard({
 
     let rawSteps: string[];
 
-    let renderAsNumbered = true;
+    const renderAsNumbered = true;
 
     if (Array.isArray(method)) {
       rawSteps = method;
