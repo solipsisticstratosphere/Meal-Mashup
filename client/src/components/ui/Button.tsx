@@ -27,15 +27,12 @@ export default function Button({
     "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
 
   const variantStyles = {
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-600",
-    secondary:
-      "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-600",
+    primary: "bg-rose-500 text-white hover:bg-rose-600",
+    secondary: "bg-fuchsia-400 text-white hover:bg-fuchsia-500",
     outline:
-      "border border-gray-300 bg-transparent hover:bg-gray-100 focus-visible:ring-gray-600 dark:border-gray-600 dark:hover:bg-gray-800",
-    ghost:
-      "bg-transparent hover:bg-gray-100 focus-visible:ring-gray-600 dark:hover:bg-gray-800",
-    danger: "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600",
+      "bg-transparent border border-rose-200 text-rose-600 hover:bg-rose-50",
+    ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
+    danger: "bg-red-500 text-white hover:bg-red-600",
   };
 
   const sizeStyles = {

@@ -89,24 +89,22 @@ export default function Home() {
                 },
               }}
             >
-              <Link href="/create-recipe">
+              <Link href="/auth/login" className="w-full sm:w-auto">
                 <Button
                   variant="primary"
                   size="lg"
-                  className="shadow-lg shadow-blue-200 group w-full sm:w-auto"
-                  icon={
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  }
+                  className="shadow-md shadow-rose-100 w-full"
+                  icon={<ArrowRight className="w-5 h-5" />}
                 >
-                  Create Recipe
+                  Get Started
                 </Button>
               </Link>
 
-              <Link href="/popular">
+              <Link href="/popular" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full sm:w-auto"
+                  className="w-full"
                   icon={<ChevronRight className="w-5 h-5" />}
                 >
                   Browse Popular
@@ -124,7 +122,7 @@ export default function Home() {
             <motion.div variants={cardVariants}>
               <FoodCard
                 title="Avocado Chocolate Mousse"
-                image="/placeholder.svg?height=200&width=300"
+                image="/img/choco.jpg"
                 tags={["Dessert", "Healthy", "Quick"]}
                 rating={4.8}
               />
@@ -132,7 +130,7 @@ export default function Home() {
             <motion.div variants={cardVariants}>
               <FoodCard
                 title="Pineapple Curry Stir-Fry"
-                image="/placeholder.svg?height=200&width=300"
+                image="/img/carrot.png"
                 tags={["Dinner", "Fusion", "Spicy"]}
                 rating={4.5}
                 featured
@@ -141,7 +139,7 @@ export default function Home() {
             <motion.div variants={cardVariants}>
               <FoodCard
                 title="Banana Bread Pancakes"
-                image="/placeholder.svg?height=200&width=300"
+                image="/img/pancakes.png"
                 tags={["Breakfast", "Sweet", "Easy"]}
                 rating={4.7}
               />
@@ -256,10 +254,8 @@ export default function Home() {
                   <Button
                     variant="secondary"
                     size="lg"
-                    className="shadow-lg shadow-green-200 group"
-                    icon={
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    }
+                    className="shadow-md shadow-fuchsia-100"
+                    icon={<ArrowRight className="w-5 h-5" />}
                   >
                     Start Creating Now
                   </Button>

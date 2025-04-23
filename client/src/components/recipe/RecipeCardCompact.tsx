@@ -218,7 +218,7 @@ export default function RecipeCardCompact({
                     : "border-blue-200 hover:bg-blue-50"
                 }
               >
-                <ThumbsUp className="w-3 h-3" />
+                <ThumbsUp className="w-4 h-4" />
               </Button>
               <Button
                 variant={userVote === "down" ? "danger" : "outline"}
@@ -231,7 +231,7 @@ export default function RecipeCardCompact({
                     : "border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600"
                 }
               >
-                <ThumbsDown className="w-3 h-3" />
+                <ThumbsDown className="w-4 h-4" />
               </Button>
             </div>
             <Button
@@ -242,7 +242,7 @@ export default function RecipeCardCompact({
               aria-label="Save Recipe"
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              <Bookmark className="w-3 h-3 mr-1" />
+              <Bookmark className="w-4 h-4 mr-1" />
               Save
             </Button>
           </div>

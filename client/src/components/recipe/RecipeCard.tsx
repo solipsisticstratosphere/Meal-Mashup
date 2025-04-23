@@ -453,40 +453,22 @@ export default function RecipeCard({
 
       {/* PDF Modal */}
       {isPdfOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-auto shadow-xl">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-green-500">
+        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-xl w-70 h-70 overflow-auto shadow-xl flex flex-col">
+            <div className="flex justify-between items-center p-4 ">
+              <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500">
                 Recipe PDF Preview
               </h2>
               <button
                 onClick={() => setIsPdfOpen(false)}
-                className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-full hover:bg-slate-100"
+                className="text-slate-500 hover:text-rose-500 transition-colors p-2 rounded-full hover:bg-rose-50"
                 aria-label="Close PDF preview"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-4 flex-1 overflow-auto flex justify-center items-center">
               <RecipePDF recipe={safeRecipe} />
-            </div>
-            <div className="p-6 border-t flex justify-end">
-              <Button
-                onClick={() => setIsPdfOpen(false)}
-                variant="outline"
-                className="mr-3"
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsPdfOpen(false);
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-                icon={<Download className="w-4 h-4" />}
-              >
-                Download
-              </Button>
             </div>
           </div>
         </div>
