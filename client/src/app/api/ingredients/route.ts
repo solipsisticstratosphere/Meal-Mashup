@@ -9,7 +9,8 @@ import {
   IngredientInput,
 } from "@/lib/models/Ingredient";
 
-// GET /api/ingredients
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const search = searchParams.get("search");
@@ -33,7 +34,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(ingredients);
     }
 
-    // Default: get all ingredients
     const ingredients = await getAllIngredients();
     return NextResponse.json(ingredients);
   } catch (error) {
@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/ingredients
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -60,7 +59,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/ingredients?id=[id]
 export async function PUT(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get("id");
@@ -91,7 +89,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/ingredients?id=[id]
 export async function DELETE(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get("id");

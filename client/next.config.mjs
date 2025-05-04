@@ -14,6 +14,12 @@ const nextConfig = {
         "pg-native": false,
       };
     }
+
+    // Add cloudflare:sockets to externals to prevent webpack from trying to bundle it
+    if (isServer) {
+      config.externals = [...(config.externals || []), "cloudflare:sockets"];
+    }
+
     return config;
   },
 

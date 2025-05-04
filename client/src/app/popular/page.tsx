@@ -2,11 +2,11 @@
 
 import { useQuery } from "@apollo/client";
 import { GET_POPULAR_RECIPES } from "@/lib/graphql";
-import RecipeCardCompact from "@/components/recipe/RecipeCardCompact";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import type { Recipe } from "@/lib/types";
 import { ChefHat, PlusCircle } from "lucide-react";
+import { FoodCard } from "@/components/main/food-card";
 
 export default function PopularRecipesPage() {
   const { data, loading, error } = useQuery(GET_POPULAR_RECIPES, {
@@ -67,12 +67,21 @@ export default function PopularRecipesPage() {
 
       {data?.popularRecipes?.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {data.popularRecipes.map((recipe: Recipe) => (
+          {data.popularRecipes.map((recipe: Recipe, index: number) => (
             <div
               key={recipe.id}
               className="transform transition-transform hover:scale-[1.02] hover:shadow-2xl"
             >
-              <RecipeCardCompact recipe={recipe} />
+              <FoodCard
+                id={recipe.id}
+                title={recipe.title}
+                image={recipe.image_url || ""}
+                tags={recipe.tags || []}
+                rating={recipe.votes || 0}
+                featured={index === 0}
+                from="popular"
+                userVote={recipe.userVote}
+              />
             </div>
           ))}
         </div>

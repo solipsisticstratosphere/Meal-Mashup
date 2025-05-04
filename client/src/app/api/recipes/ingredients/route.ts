@@ -7,6 +7,8 @@ import {
 } from "@/lib/models/Recipe";
 import { getIngredientsForRecipe } from "@/lib/models/Ingredient";
 
+export const runtime = "nodejs";
+
 // GET /api/recipes/ingredients?recipeId=[id]
 export async function GET(request: NextRequest) {
   const recipeId = request.nextUrl.searchParams.get("recipeId");

@@ -3,28 +3,34 @@
 import { useQuery } from "@apollo/client";
 import { GET_RECIPE } from "@/lib/graphql";
 import RecipeCard from "@/components/recipe/RecipeCard";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ChefHat, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export default function RecipeDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const recipeId = params.id as string;
+  const fromMyRecipes = searchParams.get("from") === "my-recipes";
+  const { user } = useAuth();
 
   const { data, loading, error } = useQuery(GET_RECIPE, {
     variables: { id: recipeId },
     skip: !recipeId,
   });
 
+  const isUserRecipe = user && data?.recipe?.user_id === user.id ? true : false;
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-6xl">
       <Link
-        href="/popular"
+        href={fromMyRecipes ? "/my-recipes" : "/popular"}
         className="inline-flex items-center mb-8 text-amber-600 hover:text-amber-700 transition-colors"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Popular Recipes
+        {fromMyRecipes ? "Back to My Recipes" : "Back to Popular Recipes"}
       </Link>
 
       {loading && (
@@ -50,9 +56,9 @@ export default function RecipeDetailPage() {
           <p className="text-gray-700 mb-8 max-w-md mx-auto">
             The recipe you are looking for does not exist or has been removed.
           </p>
-          <Link href="/popular">
+          <Link href={fromMyRecipes ? "/my-recipes" : "/popular"}>
             <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition-all">
-              Browse Popular Recipes
+              {fromMyRecipes ? "Back to My Recipes" : "Browse Popular Recipes"}
             </Button>
           </Link>
         </div>
@@ -60,7 +66,7 @@ export default function RecipeDetailPage() {
 
       {data?.recipe && (
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <RecipeCard recipe={data.recipe} />
+          <RecipeCard recipe={data.recipe} showOwnerControls={isUserRecipe} />
         </div>
       )}
     </div>

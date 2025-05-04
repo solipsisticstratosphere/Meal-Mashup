@@ -2,6 +2,7 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import AuthProvider from "@/components/providers/AuthProvider";
 
 const ApolloProviderWrapper = dynamic(() => import("@/lib/apollo-provider"), {
   ssr: false,
@@ -77,5 +78,9 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
     );
   }
 
-  return <ApolloProviderWrapper>{children}</ApolloProviderWrapper>;
+  return (
+    <AuthProvider>
+      <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+    </AuthProvider>
+  );
 }

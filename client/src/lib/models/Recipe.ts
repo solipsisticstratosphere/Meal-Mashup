@@ -23,6 +23,7 @@ export interface Recipe {
   featured: boolean;
   created_at: Date;
   updated_at: Date;
+  user_id: string | null;
 }
 
 export type RecipeInput = Omit<Recipe, "id" | "created_at" | "updated_at">;
@@ -134,8 +135,8 @@ export async function createCompleteRecipe(
     const recipeResult = await client.query(
       `INSERT INTO recipes (
         title, description, image_url, prep_time_minutes, cook_time_minutes, 
-        servings, difficulty, instructions, tags, rating, featured
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        servings, difficulty, instructions, tags, rating, featured, user_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         recipeData.title,
         recipeData.description,
@@ -148,6 +149,7 @@ export async function createCompleteRecipe(
         recipeData.tags,
         recipeData.rating,
         recipeData.featured,
+        recipeData.user_id || null,
       ]
     );
 
@@ -177,5 +179,12 @@ export async function getRecipesByDifficulty(
   return await query<Recipe>(
     "SELECT * FROM recipes WHERE difficulty = $1 ORDER BY title",
     [difficulty]
+  );
+}
+
+export async function getRecipesByUserId(userId: string): Promise<Recipe[]> {
+  return await query<Recipe>(
+    "SELECT * FROM recipes WHERE user_id = $1 ORDER BY created_at DESC",
+    [userId]
   );
 }

@@ -17,6 +17,7 @@ export const GET_POPULAR_RECIPES = gql`
     popularRecipes(limit: $limit) {
       id
       title
+      image_url
       ingredients {
         ingredient {
           id
@@ -31,6 +32,8 @@ export const GET_POPULAR_RECIPES = gql`
       difficulty
       votes
       createdAt
+      tags
+      userVote
     }
   }
 `;
@@ -55,6 +58,8 @@ export const GET_RECIPE = gql`
       difficulty
       votes
       createdAt
+      user_id
+      userVote
     }
   }
 `;
@@ -64,6 +69,7 @@ export const GET_MY_RECIPES = gql`
     myRecipes {
       id
       title
+      image_url
       ingredients {
         ingredient {
           id
@@ -78,6 +84,8 @@ export const GET_MY_RECIPES = gql`
       difficulty
       votes
       createdAt
+      tags
+      userVote
     }
   }
 `;
@@ -111,6 +119,7 @@ export const VOTE_RECIPE = gql`
     voteRecipe(recipeId: $recipeId, vote: $vote) {
       id
       votes
+      userVote
     }
   }
 `;
@@ -127,13 +136,15 @@ export const SAVE_RECIPE = gql`
   }
 `;
 
-export const REGISTER = gql`
-  mutation Register($email: String!, $password: String!) {
-    register(email: $email, password: $password) {
-      token
+export const SIGNUP = gql`
+  mutation Signup($email: String!, $password: String!, $name: String) {
+    signup(email: $email, password: $password, name: $name) {
+      success
+      message
       user {
         id
         email
+        name
       }
     }
   }
@@ -146,7 +157,82 @@ export const LOGIN = gql`
       user {
         id
         email
+        name
+        role
+        image_url
       }
+    }
+  }
+`;
+
+export const CURRENT_USER = gql`
+  query CurrentUser {
+    me {
+      id
+      email
+      name
+      role
+      image_url
+    }
+  }
+`;
+
+export const UPDATE_PROFILE = gql`
+  mutation UpdateProfile($name: String, $image_url: String) {
+    updateProfile(name: $name, image_url: $image_url) {
+      id
+      name
+      email
+      image_url
+    }
+  }
+`;
+
+export const CHANGE_PASSWORD = gql`
+  mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
+    changePassword(
+      currentPassword: $currentPassword
+      newPassword: $newPassword
+    ) {
+      success
+      message
+    }
+  }
+`;
+
+export const FORGOT_PASSWORD = gql`
+  mutation ForgotPassword($email: String!) {
+    forgotPassword(email: $email) {
+      success
+      message
+    }
+  }
+`;
+
+export const RESET_PASSWORD = gql`
+  mutation ResetPassword($token: String!, $password: String!) {
+    resetPassword(token: $token, password: $password) {
+      success
+      message
+    }
+  }
+`;
+
+export const DELETE_RECIPE = gql`
+  mutation DeleteRecipe($id: ID!) {
+    deleteRecipe(id: $id) {
+      success
+      message
+    }
+  }
+`;
+
+export const GET_RECIPE_VOTES = gql`
+  query GetRecipeVotes($recipeId: ID!) {
+    recipeVotes(recipeId: $recipeId) {
+      likes
+      dislikes
+      userVote
     }
   }
 `;

@@ -13,8 +13,36 @@ import {
   getRecipeById,
   RecipeInput,
   createCompleteRecipe,
+  RecipeIngredient,
+  getRecipesByUserId,
 } from "@/lib/models/Recipe";
 import { generateRecipeFromIngredients } from "@/lib/huggingface";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
+import prisma from "@/lib/prisma";
+
+export const runtime = "nodejs";
+
+interface RecipeVote {
+  id: string;
+  userId: string;
+  recipeId: string;
+  voteType: string;
+  createdAt: Date;
+}
+
+async function getUserFromSession() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (session && session.user && session.user.id) {
+      return session.user;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting user session:", error);
+    return null;
+  }
+}
 
 const typeDefs = `
   enum IngredientCategory {
@@ -44,10 +72,10 @@ const typeDefs = `
   }
 
   enum VoteType {
-    UP
-    DOWN
-    up
-    down
+    LIKE
+    DISLIKE
+    like
+    dislike
   }
 
   type Ingredient {
@@ -84,6 +112,14 @@ const typeDefs = `
     featured: Boolean
     createdAt: String!
     votes: Int
+    user_id: String
+    userVote: String
+  }
+
+  type RecipeVotes {
+    likes: Int!
+    dislikes: Int!
+    userVote: String
   }
 
   input RecipeIngredientInput {
@@ -103,6 +139,7 @@ const typeDefs = `
     difficulty: String
     instructions: String
     tags: [String]
+    user_id: String
   }
 
   type Query {
@@ -111,11 +148,12 @@ const typeDefs = `
     popularRecipes(limit: Int): [Recipe!]!
     recipe(id: ID!): Recipe
     myRecipes: [Recipe!]!
+    recipeVotes(recipeId: ID!): RecipeVotes!
   }
 
   type Mutation {
     generateRecipe(ingredients: [ID!]!): Recipe!
-    voteRecipe(recipeId: ID!, vote: VoteType!): Recipe!
+    voteRecipe(recipeId: ID!, vote: VoteType): Recipe!
     createRecipe(recipe: RecipeInput!, ingredients: [RecipeIngredientInput!]!): Recipe!
   }
 `;
@@ -155,7 +193,41 @@ const resolvers = {
       return await getRecipeById(id);
     },
     myRecipes: async () => {
-      return await getAllRecipes();
+      const user = await getUserFromSession();
+
+      if (!user) {
+        return [];
+      }
+
+      return await getRecipesByUserId(user.id);
+    },
+    recipeVotes: async (_: unknown, { recipeId }: { recipeId: string }) => {
+      try {
+        const votes: RecipeVote[] = await prisma.recipeVote.findMany({
+          where: {
+            recipeId: recipeId,
+          },
+        });
+
+        const likeCount = votes.filter((v) => v.voteType === "like").length;
+        const dislikeCount = votes.filter(
+          (v) => v.voteType === "dislike"
+        ).length;
+
+        const user = await getUserFromSession();
+        const currentUserVote = user
+          ? votes.find((v) => v.userId === user.id)?.voteType
+          : null;
+
+        return {
+          likes: likeCount,
+          dislikes: dislikeCount,
+          userVote: currentUserVote || null,
+        };
+      } catch (error) {
+        console.error("Error fetching recipe votes:", error);
+        return { likes: 0, dislikes: 0, userVote: null };
+      }
     },
   },
   Recipe: {
@@ -201,6 +273,14 @@ const resolvers = {
     ) => {
       try {
         console.log("Generating recipe with ingredients:", ingredients);
+
+        const user = await getUserFromSession();
+
+        if (!user) {
+          throw new Error("Authentication required to save recipes");
+        }
+
+        const userId = user.id;
 
         const fetchedIngredients = await Promise.all(
           ingredients.map((id) => getIngredientById(id))
@@ -249,7 +329,6 @@ const resolvers = {
               | "hard",
             prep_time_minutes: generatedRecipe.preparationTime,
             instructions: generatedRecipe.cookingMethod,
-
             image_url: null,
             cook_time_minutes: Math.round(
               generatedRecipe.preparationTime * 0.6
@@ -258,6 +337,7 @@ const resolvers = {
             tags: ingredientNames.slice(0, 3),
             rating: null,
             featured: false,
+            user_id: userId,
           };
 
           const ingredientsInput = uniqueIngredients.map((ingredient) => {
@@ -351,13 +431,14 @@ const resolvers = {
               .filter(Boolean),
             rating: 0,
             featured: false,
+            user_id: userId,
           };
 
           const ingredientData = validIngredients.map((ing) => ({
             ingredient_id: ing.id,
             quantity: 1,
             unit: ing.unit_of_measure || "unit",
-            notes: undefined, // Using undefined instead of null for compatibility
+            notes: undefined,
           }));
 
           const savedRecipe = await createCompleteRecipe(
@@ -407,23 +488,142 @@ const resolvers = {
     },
     voteRecipe: async (
       _: unknown,
-      { recipeId, vote }: { recipeId: string; vote: "UP" | "DOWN" }
+      { recipeId, vote }: { recipeId: string; vote: "LIKE" | "DISLIKE" | null }
     ) => {
-      return {
-        id: recipeId,
-        votes: vote === "UP" ? 1 : -1,
-      };
+      try {
+        const user = await getUserFromSession();
+
+        if (!user) {
+          throw new Error("Authentication required to vote on recipes");
+        }
+
+        const existingVote = await prisma.recipeVote.findUnique({
+          where: {
+            userId_recipeId: {
+              userId: user.id,
+              recipeId: recipeId,
+            },
+          },
+        });
+
+        if (vote === null) {
+          if (existingVote) {
+            await prisma.recipeVote.delete({
+              where: {
+                id: existingVote.id,
+              },
+            });
+          }
+
+          const recipe = await prisma.recipe.findUnique({
+            where: { id: recipeId },
+          });
+
+          return {
+            id: recipeId,
+            votes: recipe?.votes || 0,
+            userVote: null,
+          };
+        }
+
+        const voteType = vote.toLowerCase();
+
+        if (existingVote) {
+          await prisma.recipeVote.update({
+            where: {
+              id: existingVote.id,
+            },
+            data: {
+              voteType: voteType,
+            },
+          });
+        } else {
+          await prisma.recipeVote.create({
+            data: {
+              userId: user.id,
+              recipeId: recipeId,
+              voteType: voteType,
+            },
+          });
+        }
+
+        const likeCount = await prisma.recipeVote.count({
+          where: {
+            recipeId: recipeId,
+            voteType: "like",
+          },
+        });
+
+        const dislikeCount = await prisma.recipeVote.count({
+          where: {
+            recipeId: recipeId,
+            voteType: "dislike",
+          },
+        });
+
+        const totalVotes = likeCount - dislikeCount;
+
+        await prisma.recipe.update({
+          where: { id: recipeId },
+          data: {
+            votes: totalVotes,
+          },
+        });
+
+        return {
+          id: recipeId,
+          votes: totalVotes,
+          userVote: voteType,
+        };
+      } catch (error) {
+        console.error("Error voting for recipe:", error);
+        throw error;
+      }
     },
     createRecipe: async (
       _: unknown,
-      { recipe }: { recipe: RecipeInput; ingredients: unknown[] }
+      {
+        recipe,
+        ingredients,
+      }: { recipe: RecipeInput; ingredients: RecipeIngredient[] }
     ) => {
-      return {
-        id: "new-recipe",
-        ...recipe,
-        createdAt: new Date().toISOString(),
-        votes: 0,
-      };
+      try {
+        const user = await getUserFromSession();
+
+        if (!user) {
+          throw new Error("Authentication required to save recipes");
+        }
+
+        const recipeWithUserId = {
+          ...recipe,
+          user_id: user.id,
+        };
+
+        const savedRecipe = await createCompleteRecipe(
+          recipeWithUserId,
+          ingredients.map((ing) => ({
+            ingredient_id: ing.ingredient_id,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            notes: ing.notes,
+          }))
+        );
+
+        return {
+          id: savedRecipe.id,
+          title: savedRecipe.title,
+          description: savedRecipe.description,
+          difficulty: savedRecipe.difficulty,
+          createdAt:
+            savedRecipe.created_at instanceof Date
+              ? savedRecipe.created_at.toISOString()
+              : new Date().toISOString(),
+          votes: 0,
+        };
+      } catch (error) {
+        console.error("Error creating recipe:", error);
+        throw error;
+      }
     },
   },
 };
@@ -439,9 +639,11 @@ const yoga = createYoga({
 });
 
 export const GET = async (request: NextRequest) => {
+  await getServerSession(authOptions);
   return yoga.handleRequest(request, {});
 };
 
 export const POST = async (request: NextRequest) => {
+  await getServerSession(authOptions);
   return yoga.handleRequest(request, {});
 };

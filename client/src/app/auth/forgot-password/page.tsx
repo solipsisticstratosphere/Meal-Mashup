@@ -2,25 +2,33 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Mail, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+
     setIsLoading(true);
+    setError("");
 
     try {
-      console.log("Password reset requested for:", email);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setSubmitted(true);
-    } catch (error) {
-      console.error("Password reset request failed:", error);
+      setIsSubmitted(true);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -40,18 +48,25 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200">
-          {!submitted ? (
+          {!isSubmitted ? (
             <>
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-2">
                   Reset Password
                 </h1>
                 <p className="text-slate-600">
-                  Enter your email to receive a password reset link
+                  Enter your email address and we&apos;ll send you a link to
+                  reset your password
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 text-red-700">
+                  <p>{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <label
                     htmlFor="email"
@@ -82,28 +97,32 @@ export default function ForgotPasswordPage() {
                   variant="primary"
                   fullWidth
                   isLoading={isLoading}
-                  icon={<ArrowRight className="w-4 h-4" />}
                 >
                   Send Reset Link
                 </Button>
               </form>
             </>
           ) : (
-            <div className="text-center py-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="h-8 w-8 text-green-600" />
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <Check className="h-6 w-6 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                Check Your Email
+              <h2 className="text-xl font-medium text-slate-900 mb-2">
+                Check your email
               </h2>
               <p className="text-slate-600 mb-6">
-                We&apos;ve sent a password reset link to{" "}
-                <span className="font-medium">{email}</span>
+                We&apos;ve sent a password reset link to:
+                <span className="block font-medium mt-1">{email}</span>
               </p>
-              <Link href="/auth/login">
-                <Button variant="outline" fullWidth>
-                  Return to Login
-                </Button>
+              <p className="text-sm text-slate-500 mb-6">
+                If you don&apos;t see it, please check your spam folder
+              </p>
+              <Link
+                href="/auth/login"
+                className="text-rose-600 hover:text-rose-500 font-medium"
+                tabIndex={0}
+              >
+                Return to login
               </Link>
             </div>
           )}

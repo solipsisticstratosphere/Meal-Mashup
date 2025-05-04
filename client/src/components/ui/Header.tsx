@@ -5,12 +5,14 @@ import type React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Utensils, UserCircle } from "lucide-react";
+import { Menu, X, Utensils, UserCircle, LogOut, User } from "lucide-react";
 import Button from "./Button";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -69,20 +71,47 @@ const Header = () => {
 
         {/* Auth Buttons (Desktop) */}
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/auth/login">
-            <Button variant="ghost" size="sm">
-              Log in
-            </Button>
-          </Link>
-          <Link href="/auth/signup">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<UserCircle className="w-4 h-4" />}
-            >
-              Sign up
-            </Button>
-          </Link>
+          {isLoading ? (
+            <div className="h-9 w-20 bg-slate-100 animate-pulse rounded-md"></div>
+          ) : isAuthenticated ? (
+            <>
+              <Link href="/profile">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<User className="w-4 h-4" />}
+                >
+                  {user?.name?.split(" ")[0] || "Profile"}
+                </Button>
+              </Link>
+              <Link href="/auth/logout">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<LogOut className="w-4 h-4" />}
+                >
+                  Log out
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/login">
+                <Button variant="ghost" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={<UserCircle className="w-4 h-4" />}
+                >
+                  Sign up
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -128,28 +157,63 @@ const Header = () => {
 
               {/* Auth Buttons (Mobile) */}
               <div className="mt-2 flex flex-col gap-2">
-                <Link
-                  href="/auth/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block w-full"
-                >
-                  <Button variant="outline" fullWidth>
-                    Log in
-                  </Button>
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block w-full"
-                >
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    icon={<UserCircle className="w-4 h-4" />}
-                  >
-                    Sign up
-                  </Button>
-                </Link>
+                {isLoading ? (
+                  <div className="h-10 bg-slate-100 animate-pulse rounded-md"></div>
+                ) : isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block w-full"
+                    >
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        icon={<User className="w-4 h-4" />}
+                      >
+                        Profile
+                      </Button>
+                    </Link>
+                    <Link
+                      href="/auth/logout"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block w-full"
+                    >
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        icon={<LogOut className="w-4 h-4" />}
+                      >
+                        Log out
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block w-full"
+                    >
+                      <Button variant="outline" fullWidth>
+                        Log in
+                      </Button>
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block w-full"
+                    >
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        icon={<UserCircle className="w-4 h-4" />}
+                      >
+                        Sign up
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>

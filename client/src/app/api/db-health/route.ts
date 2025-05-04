@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { healthCheck } from "@/lib/db.server";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const isHealthy = await healthCheck();

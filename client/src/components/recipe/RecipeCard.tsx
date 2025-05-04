@@ -5,7 +5,7 @@ import React from "react";
 import Button from "@/components/ui/Button";
 import { useRecipeStore } from "@/store/recipeStore";
 import { useMutation } from "@apollo/client";
-import { VOTE_RECIPE, SAVE_RECIPE } from "@/lib/graphql";
+import { VOTE_RECIPE, SAVE_RECIPE, DELETE_RECIPE } from "@/lib/graphql";
 import { useState } from "react";
 import RecipePDF from "./RecipePDF";
 import {
@@ -17,38 +17,59 @@ import {
   ChefHat,
   Share2,
   X,
+  Utensils,
 } from "lucide-react";
+import Image from "next/image";
 
 interface RecipeCardProps {
   recipe: Recipe;
   className?: string;
+  showOwnerControls?: boolean;
 }
 
 export default function RecipeCard({
   recipe,
   className = "",
+  showOwnerControls = false,
 }: RecipeCardProps) {
-  const {
-    votedRecipes,
-    voteRecipe,
-    saveRecipe: storeRecipe,
-  } = useRecipeStore();
+  const { voteRecipe: storeVote, saveRecipe: storeRecipe } = useRecipeStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isPdfOpen, setIsPdfOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [currentUserVote, setCurrentUserVote] = useState<
+    "like" | "dislike" | null
+  >(recipe.userVote || null);
 
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
+  const [deleteRecipeMutation] = useMutation(DELETE_RECIPE);
 
-  const userVote = votedRecipes[recipe.id];
+  const gradients = [
+    "from-amber-200 to-orange-400",
+    "from-rose-300 to-fuchsia-500",
+    "from-blue-300 to-cyan-500",
+    "from-emerald-300 to-teal-500",
+    "from-indigo-300 to-purple-500",
+  ];
+
+  const gradientIndex = recipe.id
+    ? parseInt(recipe.id.replace(/\D/g, "").slice(0, 4), 10) % gradients.length
+    : Math.floor(Math.random() * gradients.length);
+
+  const backgroundGradient = gradients[gradientIndex];
 
   const handleVote = async (vote: VoteType) => {
     try {
+      // If user clicked the same vote type again, we're removing their vote
+      const voteToSend = currentUserVote === vote ? null : vote;
+
       const { data } = await voteRecipeMutation({
-        variables: { recipeId: recipe.id, vote: vote.toUpperCase() },
+        variables: { recipeId: recipe.id, vote: voteToSend },
       });
 
-      if (data) {
-        voteRecipe(recipe.id, vote);
+      if (data?.voteRecipe) {
+        setCurrentUserVote(data.voteRecipe.userVote);
+        storeVote(recipe.id, voteToSend as VoteType);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
@@ -90,6 +111,30 @@ export default function RecipeCard({
 
   const handleDownload = () => {
     setIsPdfOpen(true);
+  };
+
+  const handleEdit = () => {
+    window.location.href = `/recipes/edit/${recipe.id}`;
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this recipe?")) {
+      try {
+        const { data } = await deleteRecipeMutation({
+          variables: { id: recipe.id },
+        });
+
+        if (data?.deleteRecipe?.success) {
+          alert("Recipe deleted successfully!");
+          window.location.href = "/my-recipes";
+        } else {
+          alert(data?.deleteRecipe?.message || "Failed to delete recipe");
+        }
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+        alert("Failed to delete recipe. Please try again.");
+      }
+    }
   };
 
   const safeRecipe: Recipe = {
@@ -178,8 +223,6 @@ export default function RecipeCard({
 
     let rawSteps: string[];
 
-    const renderAsNumbered = true;
-
     if (Array.isArray(method)) {
       rawSteps = method;
     } else {
@@ -202,62 +245,14 @@ export default function RecipeCard({
       );
     }
 
-    let finalStepsToDisplay: string[];
-
-    if (Array.isArray(method)) {
-      finalStepsToDisplay = cleanedAndFilteredSteps;
-    } else {
-      const looksNumbered =
-        cleanedAndFilteredSteps.length > 0 &&
-        numberPrefixPattern.test(cleanedAndFilteredSteps[0]);
-
-      if (looksNumbered) {
-        finalStepsToDisplay = cleanedAndFilteredSteps
-          .map((step) => step.replace(numberPrefixPattern, "").trim())
-          .filter((step) => step !== "");
-
-        if (finalStepsToDisplay.length === 0) {
-          return (
-            <p className="text-slate-500 italic">
-              No detailed instructions available after processing.
-            </p>
-          );
-        }
-      } else {
-        finalStepsToDisplay = cleanedAndFilteredSteps;
-      }
-    }
-
     return (
-      <div className="space-y-4">
-        {finalStepsToDisplay.map((stepText, index) => {
-          if (stepText.trim() === "") {
-            return null;
-          }
-
-          const uniqueKey = `step-${index}-${stepText
-            .substring(0, 10)
-            .replace(/\s+/g, "-")}`;
-
-          return (
-            <div key={uniqueKey} className="flex items-start mb-4">
-              {/* Number circle with explicit text rendering */}
-              <div
-                className="flex-shrink-0 mr-4 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center"
-                style={{ minWidth: "24px", textAlign: "center" }}
-              >
-                <span
-                  className="text-blue-600 text-sm font-semibold"
-                  style={{ display: "inline-block" }}
-                >
-                  {index + 1}
-                </span>
-              </div>
-              <div className="text-slate-700 leading-relaxed">{stepText}</div>
-            </div>
-          );
-        })}
-      </div>
+      <ol className="list-decimal pl-5 mt-3 space-y-2">
+        {cleanedAndFilteredSteps.map((step, index) => (
+          <li key={index} className="text-slate-700">
+            {step.replace(numberPrefixPattern, "")}
+          </li>
+        ))}
+      </ol>
     );
   };
 
@@ -265,6 +260,25 @@ export default function RecipeCard({
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden ${className}`}
     >
+      <div className="relative h-48 md:h-64 overflow-hidden">
+        {recipe.image_url && !imageError ? (
+          <Image
+            src={recipe.image_url}
+            alt={recipe.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div
+            className={`w-full h-full bg-gradient-to-r ${backgroundGradient} flex items-center justify-center`}
+          >
+            <Utensils className="w-16 h-16 text-white opacity-75" />
+          </div>
+        )}
+      </div>
+
       <div className="p-6 md:p-8">
         <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-fuchsia-500 to-rose-500">
           {safeRecipe.title}
@@ -384,70 +398,112 @@ export default function RecipeCard({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 pt-6 border-t border-slate-200">
-          <div className="flex flex-wrap justify-between gap-3">
-            <div className="flex gap-2">
-              <Button
-                variant={userVote === "up" ? "primary" : "outline"}
-                size="sm"
-                onClick={() => handleVote("up")}
-                aria-label="Upvote"
-                className={
-                  userVote === "up"
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "border-blue-200 hover:bg-blue-50"
-                }
-              >
-                <ThumbsUp className="w-4 h-4 mr-1" />
-                Upvote
-              </Button>
-              <Button
-                variant={userVote === "down" ? "danger" : "outline"}
-                size="sm"
-                onClick={() => handleVote("down")}
-                aria-label="Downvote"
-                className={
-                  userVote === "down"
-                    ? ""
-                    : "border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600"
-                }
-              >
-                <ThumbsDown className="w-4 h-4 mr-1" />
-                Downvote
-              </Button>
-            </div>
+        <div className="flex flex-col p-6 pt-0">
+          <div className="flex flex-wrap gap-3 mt-6">
             <Button
-              variant="secondary"
+              variant="outline"
+              size="sm"
+              onClick={() => handleVote("like")}
+              className={
+                currentUserVote === "like"
+                  ? "bg-green-50 text-green-600 border-green-200"
+                  : ""
+              }
+            >
+              <ThumbsUp className="w-4 h-4 mr-2" />
+              Like ({safeRecipe.votes})
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleVote("dislike")}
+              className={
+                currentUserVote === "dislike"
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : ""
+              }
+            >
+              <ThumbsDown className="w-4 h-4 mr-2" />
+              Dislike
+            </Button>
+
+            <Button
+              variant="outline"
               size="sm"
               onClick={handleSave}
-              isLoading={isSaving}
-              aria-label="Save Recipe"
-              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={isSaving}
             >
               <Bookmark className="w-4 h-4 mr-2" />
-              Save Recipe
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={handleShare}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="w-4 h-4 mr-2" />
+              Download PDF
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            <Button
-              onClick={handleDownload}
-              aria-label="Download as PDF"
-              className="bg-blue-600 hover:bg-blue-700"
-              icon={<Download className="w-4 h-4" />}
-            >
-              Download PDF
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleShare}
-              aria-label="Share Recipe"
-              className="border-blue-200 hover:bg-blue-50"
-              icon={<Share2 className="w-4 h-4" />}
-            >
-              Share Recipe
-            </Button>
-          </div>
+          {/* Owner controls */}
+          {showOwnerControls && (
+            <div className="flex flex-wrap gap-3 mt-6 border-t pt-6 border-slate-100">
+              <div className="w-full mb-2">
+                <h4 className="text-sm font-medium text-slate-500">
+                  Owner Controls
+                </h4>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEdit}
+                className="bg-blue-50 text-blue-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4 mr-2"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Recipe
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                className="bg-red-50 text-red-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4 mr-2"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+                Delete Recipe
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

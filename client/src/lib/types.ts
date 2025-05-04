@@ -38,7 +38,12 @@ export interface Recipe {
   difficulty: DifficultyLevel;
   createdAt: Date | string;
   votes: number;
+  likes?: number;
+  dislikes?: number;
+  userVote?: "like" | "dislike" | null;
   userId?: string;
+  user_id?: string;
+  tags?: string[];
 }
 
 export interface User {
@@ -64,4 +69,4 @@ export interface Session {
   expiresAt: Date;
 }
 
-export type VoteType = "up" | "down";
+export type VoteType = "like" | "dislike";

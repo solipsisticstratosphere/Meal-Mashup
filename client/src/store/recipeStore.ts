@@ -15,8 +15,8 @@ interface RecipeState {
   saveRecipe: (recipe: Recipe) => void;
   removeSavedRecipe: (id: string) => void;
 
-  votedRecipes: Record<string, VoteType>;
-  voteRecipe: (recipeId: string, voteType: VoteType) => void;
+  votedRecipes: Record<string, VoteType | null>;
+  voteRecipe: (recipeId: string, voteType: VoteType | null) => void;
 
   isGenerating: boolean;
   setIsGenerating: (isGenerating: boolean) => void;
@@ -54,7 +54,9 @@ export const useRecipeStore = create<RecipeState>()(
       votedRecipes: {},
       voteRecipe: (recipeId, voteType) =>
         set((state) => ({
-          votedRecipes: { ...state.votedRecipes, [recipeId]: voteType },
+          votedRecipes: voteType
+            ? { ...state.votedRecipes, [recipeId]: voteType }
+            : { ...state.votedRecipes, [recipeId]: null },
         })),
 
       isGenerating: false,

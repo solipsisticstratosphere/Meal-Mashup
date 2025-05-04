@@ -9,8 +9,13 @@ import {
   updateRecipe,
   deleteRecipe,
   RecipeInput,
+  getRecipesByUserId,
 } from "@/lib/models/Recipe";
 import { getIngredientsForRecipe } from "@/lib/models/Ingredient";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
+
+export const runtime = "nodejs";
 
 // GET /api/recipes
 export async function GET(request: NextRequest) {
@@ -20,9 +25,22 @@ export async function GET(request: NextRequest) {
   const tag = searchParams.get("tag");
   const featured = searchParams.get("featured");
   const withIngredients = searchParams.get("withIngredients") === "true";
+  const myRecipes = searchParams.get("myRecipes") === "true";
 
   try {
-    // Get single recipe by ID
+    if (myRecipes) {
+      const session = await getServerSession(authOptions);
+      if (!session || !session.user) {
+        return NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+
+      const recipes = await getRecipesByUserId(session.user.id);
+      return NextResponse.json(recipes);
+    }
+
     if (id) {
       const recipe = await getRecipeById(id);
       if (!recipe) {
@@ -40,25 +58,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(recipe);
     }
 
-    // Search by title
     if (search) {
       const recipes = await searchRecipes(search);
       return NextResponse.json(recipes);
     }
 
-    // Get by tag
     if (tag) {
       const recipes = await getRecipesByTag(tag);
       return NextResponse.json(recipes);
     }
 
-    // Get featured recipes
     if (featured === "true") {
       const recipes = await getFeaturedRecipes();
       return NextResponse.json(recipes);
     }
 
-    // Default: get all recipes
     const recipes = await getAllRecipes();
     return NextResponse.json(recipes);
   } catch (error) {
@@ -73,7 +87,18 @@ export async function GET(request: NextRequest) {
 // POST /api/recipes
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
     const body = await request.json();
+
+    if (session && session.user) {
+      body.user_id = session.user.id;
+    } else {
+      return NextResponse.json(
+        { error: "Recipe not saved. Authentication required." },
+        { status: 401 }
+      );
+    }
+
     const recipe = await createRecipe(body as RecipeInput);
     return NextResponse.json(recipe, { status: 201 });
   } catch (error) {

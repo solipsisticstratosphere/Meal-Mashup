@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
-// Load environment variables from .env file
 const path = require("path");
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
 const { Client } = require("pg");
 const fs = require("fs");
 
-// Database configuration from environment variables
 const dbConfig = {
   user: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
@@ -21,15 +19,13 @@ console.log(`- Host: ${dbConfig.host}`);
 console.log(`- Port: ${dbConfig.port}`);
 console.log(`- Database: ${dbConfig.database}`);
 console.log(`- User: ${dbConfig.user}`);
-// Do not log password
 
 async function setupDatabase() {
   console.log("Starting database setup...");
 
-  // Connect to PostgreSQL server to create database if it doesn't exist
   const pgClient = new Client({
     ...dbConfig,
-    database: "postgres", // Connect to default postgres database first
+    database: "postgres",
   });
 
   try {

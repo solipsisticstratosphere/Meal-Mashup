@@ -1,19 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { ArrowRight, Mail, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl") || "/profile";
+  const { data: session, status } = useSession();
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      console.log(
+        "[LoginPage] Authenticated session detected, redirecting to:",
+        returnUrl
+      );
+      router.push(returnUrl);
+    } else if (status === "unauthenticated") {
+      console.log("[LoginPage] No active session, showing login form");
+    }
+  }, [session, status, router, returnUrl]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] bg-gradient-to-b from-rose-50 to-white items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-rose-500"></div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,15 +58,35 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.email || !formData.password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
     setIsLoading(true);
+    setError("");
 
     try {
-      console.log("Login submitted:", formData);
+      console.log("[LoginPage] Attempting signin with credentials");
+      const result = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+        callbackUrl: returnUrl,
+      });
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.push("/");
-    } catch (error) {
-      console.error("Login failed:", error);
+      console.log("[LoginPage] Signin result:", result);
+
+      if (result?.error) {
+        setError(result.error || "Invalid credentials");
+      } else if (result?.ok) {
+        window.location.href = returnUrl;
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("[LoginPage] Error during signin:", error);
+      setError(error.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -64,10 +110,18 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-2">
               Welcome Back
             </h1>
-            <p className="text-slate-600">Sign in to continue to Meal Mashup</p>
+            <p className="text-slate-600">
+              Sign in to your Meal Mashup account
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 text-red-700">
+              <p>{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <label
                 htmlFor="email"
@@ -94,12 +148,21 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Password
-              </label>
+              <div className="flex justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-slate-700"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm font-medium text-rose-600 hover:text-rose-500"
+                  tabIndex={0}
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-slate-400" />
@@ -136,16 +199,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="text-right">
-              <Link
-                href="/auth/forgot-password"
-                className="text-sm font-medium text-rose-600 hover:text-rose-500"
-                tabIndex={0}
-              >
-                Forgot your password?
-              </Link>
-            </div>
-
             <Button
               type="submit"
               variant="primary"
@@ -153,7 +206,7 @@ export default function LoginPage() {
               isLoading={isLoading}
               icon={<ArrowRight className="w-4 h-4" />}
             >
-              Sign in
+              Sign In
             </Button>
           </form>
 
@@ -165,7 +218,7 @@ export default function LoginPage() {
                 className="font-medium text-rose-600 hover:text-rose-500"
                 tabIndex={0}
               >
-                Sign up
+                Create one
               </Link>
             </p>
           </div>

@@ -21,24 +21,23 @@ import {
 interface RecipeCardCompactProps {
   recipe: Recipe;
   className?: string;
+  from?: string;
 }
 
 export default function RecipeCardCompact({
   recipe,
   className = "",
+  from,
 }: RecipeCardCompactProps) {
-  const {
-    votedRecipes,
-    voteRecipe,
-    saveRecipe: storeRecipe,
-  } = useRecipeStore();
+  const { voteRecipe: storeVote, saveRecipe: storeRecipe } = useRecipeStore();
   const [isSaving, setIsSaving] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [currentUserVote, setCurrentUserVote] = useState<
+    "like" | "dislike" | null
+  >(recipe.userVote || null);
 
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
-
-  const userVote = votedRecipes[recipe.id];
 
   const safeRecipe = {
     ...recipe,
@@ -51,12 +50,15 @@ export default function RecipeCardCompact({
 
   const handleVote = async (vote: VoteType) => {
     try {
+      const voteToSend = currentUserVote === vote ? null : vote;
+
       const { data } = await voteRecipeMutation({
-        variables: { recipeId: recipe.id, vote: vote.toUpperCase() },
+        variables: { recipeId: recipe.id, vote: voteToSend },
       });
 
-      if (data) {
-        voteRecipe(recipe.id, vote);
+      if (data?.voteRecipe) {
+        setCurrentUserVote(data.voteRecipe.userVote);
+        storeVote(recipe.id, voteToSend as VoteType);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
@@ -208,26 +210,26 @@ export default function RecipeCardCompact({
           <div className="flex justify-between items-center gap-2 mb-2.5">
             <div className="flex gap-1.5">
               <Button
-                variant={userVote === "up" ? "primary" : "outline"}
+                variant={currentUserVote === "like" ? "primary" : "outline"}
                 size="sm"
-                onClick={() => handleVote("up")}
-                aria-label="Upvote"
+                onClick={() => handleVote("like")}
+                aria-label="Like"
                 className={
-                  userVote === "up"
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "border-blue-200 hover:bg-blue-50"
+                  currentUserVote === "like"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "border-green-200 hover:bg-green-50 text-green-600"
                 }
               >
                 <ThumbsUp className="w-4 h-4" />
               </Button>
               <Button
-                variant={userVote === "down" ? "danger" : "outline"}
+                variant={currentUserVote === "dislike" ? "danger" : "outline"}
                 size="sm"
-                onClick={() => handleVote("down")}
-                aria-label="Downvote"
+                onClick={() => handleVote("dislike")}
+                aria-label="Dislike"
                 className={
-                  userVote === "down"
-                    ? ""
+                  currentUserVote === "dislike"
+                    ? "bg-red-600 hover:bg-red-700 text-white"
                     : "border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600"
                 }
               >
@@ -248,7 +250,11 @@ export default function RecipeCardCompact({
           </div>
 
           <Link
-            href={`/recipes/${recipe.id}`}
+            href={
+              from
+                ? `/recipes/${recipe.id}?from=${from}`
+                : `/recipes/${recipe.id}`
+            }
             className="block w-full text-center py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             View Full Recipe
