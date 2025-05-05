@@ -31,6 +31,8 @@ export const GET_POPULAR_RECIPES = gql`
       preparationTime
       difficulty
       votes
+      likes
+      dislikes
       createdAt
       tags
       userVote
@@ -57,6 +59,8 @@ export const GET_RECIPE = gql`
       preparationTime
       difficulty
       votes
+      likes
+      dislikes
       createdAt
       user_id
       userVote
@@ -83,6 +87,8 @@ export const GET_MY_RECIPES = gql`
       preparationTime
       difficulty
       votes
+      likes
+      dislikes
       createdAt
       tags
       userVote
@@ -109,6 +115,8 @@ export const GENERATE_RECIPE = gql`
       preparationTime
       difficulty
       votes
+      likes
+      dislikes
       createdAt
     }
   }
@@ -120,6 +128,8 @@ export const VOTE_RECIPE = gql`
       id
       votes
       userVote
+      likes
+      dislikes
     }
   }
 `;

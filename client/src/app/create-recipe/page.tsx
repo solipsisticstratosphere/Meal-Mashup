@@ -13,7 +13,7 @@ import { useMutation } from "@apollo/client";
 import { GENERATE_RECIPE } from "@/lib/graphql";
 import type { Ingredient, Recipe, DifficultyLevel } from "@/lib/types";
 import { generateRecipeFromIngredients } from "@/lib/huggingface";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { motion, useAnimation } from "framer-motion";
 
 export default function CreateRecipePage() {
@@ -261,7 +261,6 @@ export default function CreateRecipePage() {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-7xl">
-      <Toaster />
       <h1 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
         Create Your Random Recipe
       </h1>

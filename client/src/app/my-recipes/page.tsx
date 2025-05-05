@@ -15,6 +15,8 @@ interface MyRecipe {
   tags?: string[];
   rating?: number;
   userVote?: "like" | "dislike" | null;
+  likes?: number;
+  dislikes?: number;
 }
 
 export default function MyRecipes() {
@@ -84,6 +86,8 @@ export default function MyRecipes() {
                   featured={index === 0}
                   from="my-recipes"
                   userVote={recipe.userVote}
+                  likes={recipe.likes || 0}
+                  dislikes={recipe.dislikes || 0}
                 />
               ))}
             </div>

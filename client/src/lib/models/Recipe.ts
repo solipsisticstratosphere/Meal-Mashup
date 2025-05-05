@@ -7,6 +7,7 @@ import {
   transaction,
 } from "../db.server";
 import { PoolClient } from "pg";
+import crypto from "crypto";
 
 export interface Recipe {
   id: string;
@@ -134,10 +135,11 @@ export async function createCompleteRecipe(
   return await transaction<Recipe>(async (client: PoolClient) => {
     const recipeResult = await client.query(
       `INSERT INTO recipes (
-        title, description, image_url, prep_time_minutes, cook_time_minutes, 
-        servings, difficulty, instructions, tags, rating, featured, user_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        id, title, description, image_url, prep_time_minutes, cook_time_minutes, 
+        servings, difficulty, instructions, tags, rating, featured, user_id, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP) RETURNING *`,
       [
+        crypto.randomUUID(),
         recipeData.title,
         recipeData.description,
         recipeData.image_url,
@@ -157,9 +159,10 @@ export async function createCompleteRecipe(
 
     for (const ingredient of ingredientData) {
       await client.query(
-        `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes)
-         VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO recipe_ingredients (id, recipe_id, ingredient_id, quantity, unit, notes, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
         [
+          crypto.randomUUID(),
           recipe.id,
           ingredient.ingredient_id,
           ingredient.quantity,

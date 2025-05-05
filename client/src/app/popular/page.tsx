@@ -81,6 +81,8 @@ export default function PopularRecipesPage() {
                 featured={index === 0}
                 from="popular"
                 userVote={recipe.userVote}
+                likes={recipe.likes || 0}
+                dislikes={recipe.dislikes || 0}
               />
             </div>
           ))}

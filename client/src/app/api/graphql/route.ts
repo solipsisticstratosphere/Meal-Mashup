@@ -20,6 +20,7 @@ import { generateRecipeFromIngredients } from "@/lib/huggingface";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 
@@ -112,6 +113,8 @@ const typeDefs = `
     featured: Boolean
     createdAt: String!
     votes: Int
+    likes: Int
+    dislikes: Int
     user_id: String
     userVote: String
   }
@@ -215,14 +218,21 @@ const resolvers = {
         ).length;
 
         const user = await getUserFromSession();
-        const currentUserVote = user
-          ? votes.find((v) => v.userId === user.id)?.voteType
-          : null;
+
+        let currentUserVote = null;
+        if (user && user.id) {
+          const userVoteRecord = votes.find((v) => v.userId === user.id);
+          currentUserVote = userVoteRecord?.voteType || null;
+
+          console.log(
+            `User ${user.id} vote for recipe ${recipeId}: ${currentUserVote}`
+          );
+        }
 
         return {
           likes: likeCount,
           dislikes: dislikeCount,
-          userVote: currentUserVote || null,
+          userVote: currentUserVote,
         };
       } catch (error) {
         console.error("Error fetching recipe votes:", error);
@@ -264,6 +274,66 @@ const resolvers = {
 
     preparationTime: (parent: { prep_time_minutes?: number }) => {
       return parent.prep_time_minutes || 0;
+    },
+
+    likes: async (parent: { id: string }) => {
+      try {
+        const count = await prisma.recipeVote.count({
+          where: {
+            recipeId: parent.id,
+            voteType: "like",
+          },
+        });
+        return count;
+      } catch (error) {
+        console.error("Error counting likes:", error);
+        return 0;
+      }
+    },
+
+    dislikes: async (parent: { id: string }) => {
+      try {
+        const count = await prisma.recipeVote.count({
+          where: {
+            recipeId: parent.id,
+            voteType: "dislike",
+          },
+        });
+        return count;
+      } catch (error) {
+        console.error("Error counting dislikes:", error);
+        return 0;
+      }
+    },
+
+    userVote: async (parent: { id: string }) => {
+      try {
+        const user = await getUserFromSession();
+
+        if (!user || !user.id) {
+          return null;
+        }
+
+        const userId = user.id;
+        console.log(
+          `Checking vote for userId: ${userId}, recipeId: ${parent.id}`
+        );
+
+        const userVote = await prisma.recipeVote.findUnique({
+          where: {
+            userId_recipeId: {
+              userId: userId,
+              recipeId: parent.id,
+            },
+          },
+        });
+
+        console.log(`Found user vote:`, userVote);
+        return userVote?.voteType || null;
+      } catch (error) {
+        console.error("Error fetching user vote:", error);
+        return null;
+      }
     },
   },
   Mutation: {
@@ -497,14 +567,25 @@ const resolvers = {
           throw new Error("Authentication required to vote on recipes");
         }
 
+        if (!user.id) {
+          throw new Error("User ID is missing");
+        }
+
+        const userId = user.id;
+        console.log(
+          `Vote request from userId: ${userId} for recipeId: ${recipeId}, vote: ${vote}`
+        );
+
         const existingVote = await prisma.recipeVote.findUnique({
           where: {
             userId_recipeId: {
-              userId: user.id,
+              userId: userId,
               recipeId: recipeId,
             },
           },
         });
+
+        console.log("Existing vote:", existingVote);
 
         if (vote === null) {
           if (existingVote) {
@@ -513,6 +594,7 @@ const resolvers = {
                 id: existingVote.id,
               },
             });
+            console.log(`Deleted vote: ${existingVote.id}`);
           }
 
           const recipe = await prisma.recipe.findUnique({
@@ -529,6 +611,9 @@ const resolvers = {
         const voteType = vote.toLowerCase();
 
         if (existingVote) {
+          console.log(
+            `Updating vote from ${existingVote.voteType} to ${voteType}`
+          );
           await prisma.recipeVote.update({
             where: {
               id: existingVote.id,
@@ -538,9 +623,11 @@ const resolvers = {
             },
           });
         } else {
+          console.log(`Creating new vote: ${voteType}`);
           await prisma.recipeVote.create({
             data: {
-              userId: user.id,
+              id: crypto.randomUUID(),
+              userId: userId,
               recipeId: recipeId,
               voteType: voteType,
             },
@@ -561,7 +648,18 @@ const resolvers = {
           },
         });
 
+        console.log(
+          `New counts - likes: ${likeCount}, dislikes: ${dislikeCount}`
+        );
         const totalVotes = likeCount - dislikeCount;
+
+        const recipe = await prisma.recipe.findUnique({
+          where: { id: recipeId },
+        });
+
+        if (!recipe) {
+          throw new Error(`Recipe with ID ${recipeId} not found`);
+        }
 
         await prisma.recipe.update({
           where: { id: recipeId },
@@ -570,10 +668,13 @@ const resolvers = {
           },
         });
 
+        console.log(`Updated recipe votes to: ${totalVotes}`);
         return {
           id: recipeId,
           votes: totalVotes,
           userVote: voteType,
+          likes: likeCount,
+          dislikes: dislikeCount,
         };
       } catch (error) {
         console.error("Error voting for recipe:", error);

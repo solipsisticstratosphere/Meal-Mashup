@@ -27,7 +27,7 @@ export function FeatureCard({
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 relative">
+    <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 relative h-[220px]">
       <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-gradient-to-br from-rose-500 to-fuchsia-500 flex items-center justify-center shadow-md">
         <span className="text-white font-bold">{step}</span>
       </div>

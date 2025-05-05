@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import { useRecipeStore } from "@/store/recipeStore";
 import { useMutation } from "@apollo/client";
 import { VOTE_RECIPE, SAVE_RECIPE, DELETE_RECIPE } from "@/lib/graphql";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RecipePDF from "./RecipePDF";
 import {
   Download,
@@ -20,6 +20,8 @@ import {
   Utensils,
 } from "lucide-react";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -32,13 +34,23 @@ export default function RecipeCard({
   className = "",
   showOwnerControls = false,
 }: RecipeCardProps) {
-  const { voteRecipe: storeVote, saveRecipe: storeRecipe } = useRecipeStore();
+  const {
+    voteRecipe: storeVote,
+    saveRecipe: storeRecipe,
+    votedRecipes,
+  } = useRecipeStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isPdfOpen, setIsPdfOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState<
     "like" | "dislike" | null
   >(recipe.userVote || null);
+  const [currentLikes, setCurrentLikes] = useState(recipe.likes || 0);
+  const [currentDislikes, setCurrentDislikes] = useState(recipe.dislikes || 0);
+  const [totalVotes, setTotalVotes] = useState(recipe.votes || 0);
+
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
@@ -58,21 +70,87 @@ export default function RecipeCard({
 
   const backgroundGradient = gradients[gradientIndex];
 
+  useEffect(() => {
+    setCurrentLikes(recipe.likes || 0);
+    setCurrentDislikes(recipe.dislikes || 0);
+    setTotalVotes(recipe.votes || 0);
+  }, [recipe.likes, recipe.dislikes, recipe.votes]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      setCurrentUserVote(null);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (recipe.id) {
+      if (isAuthenticated && votedRecipes[recipe.id] !== undefined) {
+        setCurrentUserVote(votedRecipes[recipe.id] || null);
+      } else if (isAuthenticated && recipe.userVote) {
+        storeVote(recipe.id, recipe.userVote);
+        setCurrentUserVote(recipe.userVote);
+      }
+    }
+  }, [recipe.id, recipe.userVote, votedRecipes, storeVote, isAuthenticated]);
+
   const handleVote = async (vote: VoteType) => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to vote for recipes", {
+        description: "Create an account or log in to save your preferences",
+        action: {
+          label: "Login",
+          onClick: () => (window.location.href = "/auth/login"),
+        },
+      });
+      return;
+    }
+
     try {
-      // If user clicked the same vote type again, we're removing their vote
       const voteToSend = currentUserVote === vote ? null : vote;
+      const oldVote = currentUserVote;
+
+      if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+      if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+      if (voteToSend === "like") setCurrentLikes((prev) => prev + 1);
+      if (voteToSend === "dislike") setCurrentDislikes((prev) => prev + 1);
+
+      setCurrentUserVote(voteToSend);
+      setTotalVotes(currentLikes - currentDislikes);
+
+      storeVote(recipe.id, voteToSend as VoteType);
 
       const { data } = await voteRecipeMutation({
         variables: { recipeId: recipe.id, vote: voteToSend },
       });
 
       if (data?.voteRecipe) {
-        setCurrentUserVote(data.voteRecipe.userVote);
-        storeVote(recipe.id, voteToSend as VoteType);
+        if (data.voteRecipe.userVote !== voteToSend) {
+          setCurrentUserVote(data.voteRecipe.userVote || null);
+          storeVote(recipe.id, data.voteRecipe.userVote);
+        }
+
+        if (data.voteRecipe.likes !== undefined) {
+          setCurrentLikes(data.voteRecipe.likes);
+        }
+
+        if (data.voteRecipe.dislikes !== undefined) {
+          setCurrentDislikes(data.voteRecipe.dislikes);
+        }
+
+        if (data.voteRecipe.votes !== undefined) {
+          setTotalVotes(data.voteRecipe.votes);
+        }
+
+        toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
+      toast.error("Failed to record your vote");
+
+      setCurrentUserVote(votedRecipes[recipe.id] || recipe.userVote || null);
+      setCurrentLikes(recipe.likes || 0);
+      setCurrentDislikes(recipe.dislikes || 0);
+      setTotalVotes(recipe.votes || 0);
     }
   };
 
@@ -300,7 +378,8 @@ export default function RecipeCard({
 
           <span className="flex items-center text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
             <ThumbsUp className="w-4 h-4 mr-1.5" />
-            {safeRecipe.votes} votes
+            {totalVotes} votes ({currentLikes} likes, {currentDislikes}{" "}
+            dislikes)
           </span>
         </div>
 
@@ -411,7 +490,7 @@ export default function RecipeCard({
               }
             >
               <ThumbsUp className="w-4 h-4 mr-2" />
-              Like ({safeRecipe.votes})
+              Like ({currentLikes})
             </Button>
 
             <Button
@@ -425,7 +504,7 @@ export default function RecipeCard({
               }
             >
               <ThumbsDown className="w-4 h-4 mr-2" />
-              Dislike
+              Dislike ({currentDislikes})
             </Button>
 
             <Button

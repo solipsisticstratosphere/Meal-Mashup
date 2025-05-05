@@ -121,27 +121,36 @@ export default function Home() {
           >
             <motion.div variants={cardVariants}>
               <FoodCard
+                id="example-recipe-1"
                 title="Avocado Chocolate Mousse"
                 image="/img/choco.jpg"
                 tags={["Dessert", "Healthy", "Quick"]}
                 rating={4.8}
+                likes={12}
+                dislikes={1}
               />
             </motion.div>
             <motion.div variants={cardVariants}>
               <FoodCard
+                id="example-recipe-2"
                 title="Pineapple Curry Stir-Fry"
                 image="/img/carrot.png"
                 tags={["Dinner", "Fusion", "Spicy"]}
                 rating={4.5}
                 featured
+                likes={15}
+                dislikes={2}
               />
             </motion.div>
             <motion.div variants={cardVariants}>
               <FoodCard
+                id="example-recipe-3"
                 title="Banana Bread Pancakes"
                 image="/img/pancakes.png"
                 tags={["Breakfast", "Sweet", "Easy"]}
                 rating={4.7}
+                likes={10}
+                dislikes={0}
               />
             </motion.div>
           </motion.div>

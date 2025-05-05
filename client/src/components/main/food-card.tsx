@@ -2,11 +2,12 @@ import { Star, Utensils, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation } from "@apollo/client";
 import { VOTE_RECIPE } from "@/lib/graphql";
 import { toast } from "sonner";
+import { useRecipeStore } from "@/store/recipeStore";
 
 interface FoodCardProps {
   id: string;
@@ -35,13 +36,38 @@ export function FoodCard({
 }: FoodCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState(userVote);
+  const [currentLikes, setCurrentLikes] = useState(likes);
+  const [currentDislikes, setCurrentDislikes] = useState(dislikes);
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const href = from ? `/recipes/${id}?from=${from}` : `/recipes/${id}`;
 
-  const totalVotes = rating || likes - dislikes;
+  const totalVotes = rating || currentLikes - currentDislikes;
 
+  const { votedRecipes, voteRecipe: storeVoteRecipe } = useRecipeStore();
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      setCurrentUserVote(null);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (id) {
+      if (isAuthenticated && votedRecipes[id] !== undefined) {
+        setCurrentUserVote(votedRecipes[id]);
+      } else if (isAuthenticated && userVote) {
+        storeVoteRecipe(id, userVote);
+        setCurrentUserVote(userVote);
+      }
+    }
+  }, [id, userVote, votedRecipes, storeVoteRecipe, isAuthenticated]);
+
+  useEffect(() => {
+    setCurrentLikes(likes);
+    setCurrentDislikes(dislikes);
+  }, [likes, dislikes]);
 
   const gradients = [
     "from-amber-200 to-orange-400",
@@ -62,24 +88,57 @@ export function FoodCard({
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.error("You need to be logged in to vote");
+      toast.error("Please log in to vote for recipes", {
+        description: "Create an account or log in to save your preferences",
+        action: {
+          label: "Login",
+          onClick: () => (window.location.href = "/auth/login"),
+        },
+      });
       return;
     }
 
     try {
       const voteToSend = currentUserVote === vote ? null : vote;
 
+      const oldVote = currentUserVote;
+
+      if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+      if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+      if (voteToSend === "like") setCurrentLikes((prev) => prev + 1);
+      if (voteToSend === "dislike") setCurrentDislikes((prev) => prev + 1);
+
+      setCurrentUserVote(voteToSend);
+
+      storeVoteRecipe(id, voteToSend);
+
       const { data } = await voteRecipeMutation({
         variables: { recipeId: id, vote: voteToSend },
       });
 
       if (data?.voteRecipe) {
-        setCurrentUserVote(data.voteRecipe.userVote);
+        if (data.voteRecipe.userVote !== voteToSend) {
+          setCurrentUserVote(data.voteRecipe.userVote);
+          storeVoteRecipe(id, data.voteRecipe.userVote);
+        }
+
+        if (data.voteRecipe.likes !== undefined) {
+          setCurrentLikes(data.voteRecipe.likes);
+        }
+
+        if (data.voteRecipe.dislikes !== undefined) {
+          setCurrentDislikes(data.voteRecipe.dislikes);
+        }
+
         toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
       toast.error("Failed to record your vote");
+
+      setCurrentUserVote(votedRecipes[id] || userVote);
+      setCurrentLikes(likes);
+      setCurrentDislikes(dislikes);
     }
   };
 
@@ -133,7 +192,7 @@ export function FoodCard({
               <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
               <span className="ml-1 text-sm font-medium">{totalVotes}</span>
               <span className="ml-2 text-xs text-slate-500">
-                ({likes} likes, {dislikes} dislikes)
+                ({currentLikes} likes, {currentDislikes} dislikes)
               </span>
             </div>
 
@@ -146,6 +205,7 @@ export function FoodCard({
                     ? "bg-green-100 text-green-600"
                     : "text-slate-400 hover:text-green-600 hover:bg-green-50"
                 )}
+                aria-label="Like recipe"
               >
                 <ThumbsUp className="w-4 h-4" />
               </button>
@@ -158,6 +218,7 @@ export function FoodCard({
                     ? "bg-red-100 text-red-600"
                     : "text-slate-400 hover:text-red-600 hover:bg-red-50"
                 )}
+                aria-label="Dislike recipe"
               >
                 <ThumbsDown className="w-4 h-4" />
               </button>

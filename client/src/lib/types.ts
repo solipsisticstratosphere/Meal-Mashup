@@ -1,14 +1,15 @@
 export type IngredientCategory =
-  | "Protein"
+  | "Meat"
   | "Vegetables"
   | "Fruit"
-  | "Grain"
+  | "Grains"
   | "Dairy"
-  | "Spice"
-  | "Herb"
+  | "Spices"
+  | "Herbs"
   | "Oil"
   | "Condiment"
-  | "Other";
+  | "Other"
+  | "Protein";
 
 export interface Ingredient {
   id: string;
