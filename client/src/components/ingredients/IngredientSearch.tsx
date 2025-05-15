@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@apollo/client";
 import { GET_INGREDIENTS } from "@/lib/graphql";
 import { Ingredient, IngredientCategory } from "@/lib/types";
+import Loading from "@/components/ui/Loading";
 
 interface IngredientSearchProps {
   onSelectIngredient: (ingredient: Ingredient) => void;
@@ -96,12 +97,7 @@ export default function IngredientSearch({
         </div>
       </form>
 
-      {loading && (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-2 text-gray-600">Loading ingredients...</span>
-        </div>
-      )}
+      {loading && <Loading text="Loading ingredients" size="small" />}
 
       {error && (
         <div

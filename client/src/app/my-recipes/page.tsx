@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button";
 import { useQuery } from "@apollo/client";
 import { GET_MY_RECIPES } from "@/lib/graphql";
 import { useSession } from "next-auth/react";
+import Loading from "@/components/ui/Loading";
 
 interface MyRecipe {
   id: string;
@@ -61,9 +62,7 @@ export default function MyRecipes() {
               </Link>
             </div>
           ) : isLoading ? (
-            <div className="flex justify-center items-center min-h-[300px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
+            <Loading text="Loading your recipes" />
           ) : error ? (
             <div className="text-center py-16 bg-white rounded-lg shadow-sm max-w-3xl mx-auto">
               <h3 className="text-xl font-medium text-red-600 mb-4">

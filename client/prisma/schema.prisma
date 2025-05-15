@@ -21,6 +21,7 @@ model User {
   votes     RecipeVote[]
   sessions  Session[]
   refreshTokens RefreshToken[]
+  savedRecipes UserSavedRecipe[]
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
@@ -80,6 +81,7 @@ model Recipe {
   user              User?           @relation(fields: [userId], references: [id])
   ingredients       RecipeIngredient[]
   recipeVotes       RecipeVote[]
+  savedBy           UserSavedRecipe[]
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
@@ -113,4 +115,16 @@ model RecipeVote {
 
   @@unique([userId, recipeId])
   @@map("recipe_votes")
+}
+
+model UserSavedRecipe {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  recipeId  String   @map("recipe_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, recipeId])
+  @@map("user_saved_recipes")
 } 

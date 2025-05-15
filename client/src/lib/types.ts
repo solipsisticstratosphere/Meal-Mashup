@@ -45,6 +45,7 @@ export interface Recipe {
   userId?: string;
   user_id?: string;
   tags?: string[];
+  isSaved?: boolean;
 }
 
 export interface User {

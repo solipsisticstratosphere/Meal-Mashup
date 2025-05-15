@@ -8,6 +8,7 @@ import { ChefHat, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/components/providers/AuthProvider";
+import Loading from "@/components/ui/Loading";
 
 export default function RecipeDetailPage() {
   const params = useParams();
@@ -33,12 +34,7 @@ export default function RecipeDetailPage() {
         {fromMyRecipes ? "Back to My Recipes" : "Back to Popular Recipes"}
       </Link>
 
-      {loading && (
-        <div className="flex flex-col justify-center items-center h-80 bg-white rounded-2xl shadow-md border border-gray-100">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-500 mb-6"></div>
-          <p className="text-gray-600 text-lg">Loading recipe details...</p>
-        </div>
-      )}
+      {loading && <Loading text="Loading recipe details" />}
 
       {error && (
         <div className="p-6 mb-6 text-red-700 bg-red-50 rounded-xl border border-red-100 shadow-sm">

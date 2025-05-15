@@ -274,7 +274,7 @@ export default function CreateRecipePage() {
               </span>
               Select Your Ingredients
             </h2>
-            <p className="mb-6 text-gray-600 pl-11">
+            <p className="mb-6 text-gray-600 ">
               Search for ingredients or drag them to the selection area.
             </p>
 

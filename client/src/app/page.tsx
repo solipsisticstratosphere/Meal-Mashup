@@ -128,6 +128,10 @@ export default function Home() {
                 rating={4.8}
                 likes={12}
                 dislikes={1}
+                showLikeDislikeButtons={false}
+                isClickable={false}
+                isSaved={false}
+                showSaveButton={false}
               />
             </motion.div>
             <motion.div variants={cardVariants}>
@@ -140,6 +144,10 @@ export default function Home() {
                 featured
                 likes={15}
                 dislikes={2}
+                showLikeDislikeButtons={false}
+                isClickable={false}
+                isSaved={false}
+                showSaveButton={false}
               />
             </motion.div>
             <motion.div variants={cardVariants}>
@@ -151,6 +159,10 @@ export default function Home() {
                 rating={4.7}
                 likes={10}
                 dislikes={0}
+                showLikeDislikeButtons={false}
+                isClickable={false}
+                isSaved={false}
+                showSaveButton={false}
               />
             </motion.div>
           </motion.div>

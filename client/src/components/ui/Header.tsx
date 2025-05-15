@@ -26,7 +26,12 @@ const Header = () => {
 
   const navigationLinks = [
     { title: "Home", href: "/" },
-    ...(isAuthenticated ? [{ title: "My Recipes", href: "/my-recipes" }] : []),
+    ...(isAuthenticated
+      ? [
+          { title: "My Recipes", href: "/my-recipes" },
+          { title: "Saved Recipes", href: "/saved-recipes" },
+        ]
+      : []),
     { title: "Popular", href: "/popular" },
   ];
 

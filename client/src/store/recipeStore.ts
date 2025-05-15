@@ -56,9 +56,21 @@ export const useRecipeStore = create<RecipeState>()(
 
       savedRecipes: [],
       saveRecipe: (recipe) =>
-        set((state) => ({
-          savedRecipes: [...state.savedRecipes, recipe],
-        })),
+        set((state) => {
+          const existingIndex = state.savedRecipes.findIndex(
+            (r) => r.id === recipe.id
+          );
+
+          if (existingIndex >= 0) {
+            const updatedRecipes = [...state.savedRecipes];
+            updatedRecipes[existingIndex] = { ...recipe, isSaved: true };
+            return { savedRecipes: updatedRecipes };
+          }
+
+          return {
+            savedRecipes: [...state.savedRecipes, { ...recipe, isSaved: true }],
+          };
+        }),
       removeSavedRecipe: (id) =>
         set((state) => ({
           savedRecipes: state.savedRecipes.filter((recipe) => recipe.id !== id),

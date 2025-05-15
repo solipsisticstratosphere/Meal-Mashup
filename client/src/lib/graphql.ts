@@ -36,6 +36,7 @@ export const GET_POPULAR_RECIPES = gql`
       createdAt
       tags
       userVote
+      isSaved
     }
   }
 `;
@@ -64,6 +65,7 @@ export const GET_RECIPE = gql`
       createdAt
       user_id
       userVote
+      isSaved
     }
   }
 `;
@@ -92,6 +94,7 @@ export const GET_MY_RECIPES = gql`
       createdAt
       tags
       userVote
+      isSaved
     }
   }
 `;
@@ -138,10 +141,11 @@ export const SAVE_RECIPE = gql`
   mutation SaveRecipe($recipeId: ID!) {
     saveRecipe(recipeId: $recipeId) {
       success
-      requiresAuth
+      requiresAuth # To let the client know if the action failed due to auth
       recipe {
-        id
+        id # Or any other fields you want to return about the saved recipe
       }
+      message # Optional: for success or error messages from the backend
     }
   }
 `;
@@ -243,6 +247,35 @@ export const GET_RECIPE_VOTES = gql`
       likes
       dislikes
       userVote
+    }
+  }
+`;
+
+export const GET_SAVED_RECIPES = gql`
+  query GetSavedRecipes {
+    savedRecipes {
+      id
+      title
+      image_url
+      ingredients {
+        ingredient {
+          id
+          name
+          image_url
+          unit_of_measure
+        }
+        quantity
+      }
+      cookingMethod
+      preparationTime
+      difficulty
+      votes
+      likes
+      dislikes
+      createdAt
+      tags
+      userVote
+      isSaved
     }
   }
 `;

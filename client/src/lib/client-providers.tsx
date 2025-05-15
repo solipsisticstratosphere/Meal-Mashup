@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import AuthProvider from "@/components/providers/AuthProvider";
+import Loading from "@/components/ui/Loading";
 
 const ApolloProviderWrapper = dynamic(() => import("@/lib/apollo-provider"), {
   ssr: false,
@@ -41,12 +42,7 @@ export default function ClientProviders({ children }: ClientProvidersProps) {
   if (isDbConnected === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className=" p-8 rounded-lg shadow-lg max-w-md w-full">
-          <div className="flex items-center justify-center mb-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-rose-500"></div>
-          </div>
-          <p className="text-center text-gray-700">Connecting to database...</p>
-        </div>
+        <Loading text="Loading" size="large" />
       </div>
     );
   }

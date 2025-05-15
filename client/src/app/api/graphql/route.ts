@@ -117,6 +117,7 @@ const typeDefs = `
     dislikes: Int
     user_id: String
     userVote: String
+    isSaved: Boolean
   }
 
   type RecipeVotes {
@@ -152,12 +153,21 @@ const typeDefs = `
     recipe(id: ID!): Recipe
     myRecipes: [Recipe!]!
     recipeVotes(recipeId: ID!): RecipeVotes!
+    savedRecipes: [Recipe!]!
+  }
+
+  type SaveRecipeResult {
+    success: Boolean!
+    requiresAuth: Boolean!
+    recipe: Recipe
+    message: String
   }
 
   type Mutation {
     generateRecipe(ingredients: [ID!]!): Recipe!
     voteRecipe(recipeId: ID!, vote: VoteType): Recipe!
     createRecipe(recipe: RecipeInput!, ingredients: [RecipeIngredientInput!]!): Recipe!
+    saveRecipe(recipeId: ID!): SaveRecipeResult!
   }
 `;
 
@@ -237,6 +247,29 @@ const resolvers = {
       } catch (error) {
         console.error("Error fetching recipe votes:", error);
         return { likes: 0, dislikes: 0, userVote: null };
+      }
+    },
+    savedRecipes: async () => {
+      const user = await getUserFromSession();
+
+      if (!user) {
+        return [];
+      }
+
+      try {
+       
+        const savedRecipes = await prisma.$queryRaw`
+          SELECT r.*, true as "isSaved"
+          FROM recipes r
+          JOIN user_saved_recipes usr ON r.id = usr.recipe_id
+          WHERE usr.user_id = ${user.id}
+        `;
+
+        
+        return savedRecipes || [];
+      } catch (error) {
+        console.error("Error fetching saved recipes:", error);
+        return [];
       }
     },
   },
@@ -333,6 +366,34 @@ const resolvers = {
       } catch (error) {
         console.error("Error fetching user vote:", error);
         return null;
+      }
+    },
+
+    isSaved: async (parent: { id: string; isSaved?: boolean }) => {
+      if (parent.isSaved !== undefined) {
+        return parent.isSaved;
+      }
+
+      try {
+        const user = await getUserFromSession();
+
+        if (!user || !user.id) {
+          return false;
+        }
+
+        const userId = user.id;
+        const recipeId = parent.id;
+
+        const savedRecipe = await prisma.$queryRaw`
+          SELECT * FROM user_saved_recipes 
+          WHERE user_id = ${userId} AND recipe_id = ${recipeId}
+          LIMIT 1
+        `;
+
+        return Array.isArray(savedRecipe) && savedRecipe.length > 0;
+      } catch (error) {
+        console.error("Error checking if recipe is saved:", error);
+        return false;
       }
     },
   },
@@ -724,6 +785,79 @@ const resolvers = {
       } catch (error) {
         console.error("Error creating recipe:", error);
         throw error;
+      }
+    },
+    saveRecipe: async (_: unknown, { recipeId }: { recipeId: string }) => {
+      try {
+        const user = await getUserFromSession();
+
+        if (!user) {
+          return {
+            success: false,
+            requiresAuth: true,
+            message: "Authentication required to save recipes",
+          };
+        }
+
+        const recipe = await prisma.recipe.findUnique({
+          where: { id: recipeId },
+        });
+
+        if (!recipe) {
+          return {
+            success: false,
+            requiresAuth: false,
+            message: `Recipe with ID ${recipeId} not found`,
+          };
+        }
+
+        
+        const existingSavedRecipe = await prisma.$queryRaw`
+          SELECT * FROM user_saved_recipes 
+          WHERE user_id = ${user.id} AND recipe_id = ${recipeId}
+          LIMIT 1
+        `;
+
+        if (
+          existingSavedRecipe &&
+          Array.isArray(existingSavedRecipe) &&
+          existingSavedRecipe.length > 0
+        ) {
+       
+          await prisma.$executeRaw`
+            DELETE FROM user_saved_recipes 
+            WHERE user_id = ${user.id} AND recipe_id = ${recipeId}
+          `;
+
+          return {
+            success: true,
+            requiresAuth: false,
+            recipe,
+            message: "Recipe removed from saved recipes",
+          };
+        } else {
+         
+          await prisma.$executeRaw`
+            INSERT INTO user_saved_recipes (id, user_id, recipe_id, created_at)
+            VALUES (${crypto.randomUUID()}, ${user.id}, ${recipeId}, NOW())
+          `;
+
+          return {
+            success: true,
+            requiresAuth: false,
+            recipe,
+            message: "Recipe saved successfully",
+          };
+        }
+      } catch (error) {
+        console.error("Error saving recipe:", error);
+        return {
+          success: false,
+          requiresAuth: false,
+          message: `Error saving recipe: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
       }
     },
   },

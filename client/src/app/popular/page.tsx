@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import type { Recipe } from "@/lib/types";
 import { ChefHat, PlusCircle } from "lucide-react";
 import { FoodCard } from "@/components/main/food-card";
+import Loading from "@/components/ui/Loading";
 
 export default function PopularRecipesPage() {
   const { data, loading, error } = useQuery(GET_POPULAR_RECIPES, {
@@ -33,12 +34,7 @@ export default function PopularRecipesPage() {
         </Link>
       </div>
 
-      {loading && (
-        <div className="flex flex-col justify-center items-center h-80 bg-gradient-to-b from-rose-50 to-white rounded-2xl shadow-md border border-gray-100">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-amber-500 mb-6"></div>
-          <p className="text-gray-600 text-lg">Loading delicious recipes...</p>
-        </div>
-      )}
+      {loading && <Loading text="Loading delicious recipes" />}
 
       {error && (
         <div className="p-6 mb-6 text-red-700 bg-red-50 rounded-xl border border-red-100 shadow-sm">
@@ -83,6 +79,7 @@ export default function PopularRecipesPage() {
                 userVote={recipe.userVote}
                 likes={recipe.likes || 0}
                 dislikes={recipe.dislikes || 0}
+                isSaved={recipe.isSaved}
               />
             </div>
           ))}

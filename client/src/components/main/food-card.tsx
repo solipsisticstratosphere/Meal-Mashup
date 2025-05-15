@@ -1,13 +1,14 @@
-import { Star, Utensils, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Star, Utensils, ThumbsUp, ThumbsDown, Bookmark } from "lucide-react";
 import { cn } from "../../lib/utils";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useMutation } from "@apollo/client";
-import { VOTE_RECIPE } from "@/lib/graphql";
+import { VOTE_RECIPE, SAVE_RECIPE } from "@/lib/graphql";
 import { toast } from "sonner";
 import { useRecipeStore } from "@/store/recipeStore";
+import { DifficultyLevel } from "@/lib/types";
 
 interface FoodCardProps {
   id: string;
@@ -20,6 +21,10 @@ interface FoodCardProps {
   userVote?: "like" | "dislike" | null;
   likes?: number;
   dislikes?: number;
+  showLikeDislikeButtons?: boolean;
+  isClickable?: boolean;
+  isSaved?: boolean;
+  showSaveButton?: boolean;
 }
 
 export function FoodCard({
@@ -33,19 +38,31 @@ export function FoodCard({
   userVote = null,
   likes = 0,
   dislikes = 0,
+  showLikeDislikeButtons = true,
+  isClickable = true,
+  isSaved = false,
+  showSaveButton = true,
 }: FoodCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState(userVote);
   const [currentLikes, setCurrentLikes] = useState(likes);
   const [currentDislikes, setCurrentDislikes] = useState(dislikes);
+  const [isRecipeSaved, setIsRecipeSaved] = useState(isSaved);
+  const [isSaving, setIsSaving] = useState(false);
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const href = from ? `/recipes/${id}?from=${from}` : `/recipes/${id}`;
 
   const totalVotes = rating || currentLikes - currentDislikes;
 
-  const { votedRecipes, voteRecipe: storeVoteRecipe } = useRecipeStore();
+  const {
+    votedRecipes,
+    voteRecipe: storeVoteRecipe,
+    saveRecipe: storeSaveRecipe,
+    removeSavedRecipe,
+  } = useRecipeStore();
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
+  const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -67,7 +84,8 @@ export function FoodCard({
   useEffect(() => {
     setCurrentLikes(likes);
     setCurrentDislikes(dislikes);
-  }, [likes, dislikes]);
+    setIsRecipeSaved(isSaved);
+  }, [likes, dislikes, isSaved]);
 
   const gradients = [
     "from-amber-200 to-orange-400",
@@ -142,6 +160,67 @@ export function FoodCard({
     }
   };
 
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error("Please log in to save recipes", {
+        action: {
+          label: "Login",
+          onClick: () => (window.location.href = "/auth/login"),
+        },
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data } = await saveRecipeMutation({
+        variables: { recipeId: id },
+      });
+
+      if (data?.saveRecipe?.success) {
+        const newSavedState = !isRecipeSaved;
+        setIsRecipeSaved(newSavedState);
+
+        if (newSavedState) {
+          const recipe = {
+            id,
+            title,
+            image_url: image,
+            tags,
+            votes: rating,
+            likes: currentLikes,
+            dislikes: currentDislikes,
+            userVote: currentUserVote,
+            isSaved: true,
+
+            cookingMethod: "",
+            preparationTime: 0,
+            difficulty: "Medium" as DifficultyLevel,
+            ingredients: [],
+            createdAt: new Date(),
+          };
+          storeSaveRecipe(recipe);
+          toast.success("Recipe saved!");
+        } else {
+          removeSavedRecipe(id);
+          toast.success("Recipe unsaved.");
+        }
+      } else if (data?.saveRecipe?.requiresAuth) {
+        toast.error("Authentication required to save recipes.");
+      } else {
+        toast.error("Failed to update saved state.");
+      }
+    } catch (error) {
+      console.error("Error saving/unsaving recipe:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="block">
       <div
@@ -150,7 +229,28 @@ export function FoodCard({
           featured ? "md:scale-105 ring-2 ring-rose-200" : ""
         )}
       >
-        <Link href={href} className="block">
+        {isClickable ? (
+          <Link href={href} className="block">
+            <div className="relative h-48 overflow-hidden">
+              {image && !imageError ? (
+                <Image
+                  src={image}
+                  alt={title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div
+                  className={`w-full h-full bg-gradient-to-r ${backgroundGradient} flex items-center justify-center`}
+                >
+                  <Utensils className="w-12 h-12 text-white opacity-75" />
+                </div>
+              )}
+            </div>
+          </Link>
+        ) : (
           <div className="relative h-48 overflow-hidden">
             {image && !imageError ? (
               <Image
@@ -169,12 +269,16 @@ export function FoodCard({
               </div>
             )}
           </div>
-        </Link>
+        )}
 
         <div className="p-5">
-          <Link href={href}>
+          {isClickable ? (
+            <Link href={href}>
+              <h3 className="font-bold text-lg mb-2">{title}</h3>
+            </Link>
+          ) : (
             <h3 className="font-bold text-lg mb-2">{title}</h3>
-          </Link>
+          )}
 
           <div className="flex flex-wrap gap-2 mb-3">
             {tags.map((tag) => (
@@ -197,31 +301,56 @@ export function FoodCard({
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => handleVote(e, "like")}
-                className={cn(
-                  "p-1.5 rounded-full transition-all",
-                  currentUserVote === "like"
-                    ? "bg-green-100 text-green-600"
-                    : "text-slate-400 hover:text-green-600 hover:bg-green-50"
-                )}
-                aria-label="Like recipe"
-              >
-                <ThumbsUp className="w-4 h-4" />
-              </button>
+              {showLikeDislikeButtons && (
+                <>
+                  <button
+                    onClick={(e) => handleVote(e, "like")}
+                    className={cn(
+                      "p-1.5 rounded-full transition-all",
+                      currentUserVote === "like"
+                        ? "bg-green-100 text-green-600"
+                        : "text-slate-400 hover:text-green-600 hover:bg-green-50"
+                    )}
+                    aria-label="Like recipe"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                  </button>
 
-              <button
-                onClick={(e) => handleVote(e, "dislike")}
-                className={cn(
-                  "p-1.5 rounded-full transition-all",
-                  currentUserVote === "dislike"
-                    ? "bg-red-100 text-red-600"
-                    : "text-slate-400 hover:text-red-600 hover:bg-red-50"
-                )}
-                aria-label="Dislike recipe"
-              >
-                <ThumbsDown className="w-4 h-4" />
-              </button>
+                  <button
+                    onClick={(e) => handleVote(e, "dislike")}
+                    className={cn(
+                      "p-1.5 rounded-full transition-all",
+                      currentUserVote === "dislike"
+                        ? "bg-red-100 text-red-600"
+                        : "text-slate-400 hover:text-red-600 hover:bg-red-50"
+                    )}
+                    aria-label="Dislike recipe"
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+
+              {showSaveButton && (
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className={cn(
+                    "p-1.5 rounded-full transition-all",
+                    isRecipeSaved
+                      ? "bg-blue-100 text-blue-600"
+                      : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                  )}
+                  aria-label={isRecipeSaved ? "Unsave recipe" : "Save recipe"}
+                >
+                  <Bookmark
+                    className={cn(
+                      "w-4 h-4",
+                      isRecipeSaved ? "fill-blue-600" : ""
+                    )}
+                  />
+                </button>
+              )}
             </div>
           </div>
         </div>
