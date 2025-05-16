@@ -301,7 +301,26 @@ const resolvers = {
     },
   },
   Recipe: {
-    ingredients: async (parent: { id: string }) => {
+    ingredients: async (parent: {
+      id: string;
+      ingredients?: Array<{
+        ingredientId: string;
+        ingredient: {
+          id: string;
+          name: string;
+          image_url: string;
+          category?: string;
+          unit_of_measure?: string;
+        };
+        quantity: string;
+        unit?: string;
+        notes?: string;
+      }>;
+    }) => {
+      if (parent.ingredients && Array.isArray(parent.ingredients)) {
+        return parent.ingredients;
+      }
+
       const recipeIngredients = await getIngredientsForRecipe(parent.id);
 
       return recipeIngredients.map((ingredient) => ({
@@ -317,6 +336,7 @@ const resolvers = {
         },
         quantity: ingredient.quantity.toString(),
         unit: ingredient.unit,
+        notes: ingredient.notes,
       }));
     },
     createdAt: (parent: { created_at?: Date }) => {
@@ -433,12 +453,7 @@ const resolvers = {
         console.log("Generating recipe with ingredients:", ingredients);
 
         const user = await getUserFromSession();
-
-        if (!user) {
-          throw new Error("Authentication required to save recipes");
-        }
-
-        const userId = user.id;
+        const userId = user?.id;
 
         const fetchedIngredients = await Promise.all(
           ingredients.map((id) => getIngredientById(id))
@@ -468,7 +483,6 @@ const resolvers = {
         }
 
         const ingredientNames = uniqueIngredients.map((i) => i.name);
-
         try {
           const generatedRecipe = await generateRecipeFromIngredients(
             uniqueIngredients.map((ing) => ({
@@ -495,7 +509,7 @@ const resolvers = {
             tags: ingredientNames.slice(0, 3),
             rating: null,
             featured: false,
-            user_id: userId,
+            user_id: userId ?? null,
           };
 
           const ingredientsInput = uniqueIngredients.map((ingredient) => {
@@ -523,16 +537,72 @@ const resolvers = {
 
             return {
               ingredient_id: ingredient.id,
+              ingredient_obj: ingredient,
               quantity,
               unit,
               notes: generatedIngredient?.quantity || "to taste",
             };
           });
 
-          const createdRecipe = await createCompleteRecipe(
-            recipeInput,
-            ingredientsInput
-          );
+          let createdRecipe;
+          if (userId) {
+            createdRecipe = await createCompleteRecipe(
+              recipeInput,
+              ingredientsInput
+            );
+          } else {
+            createdRecipe = {
+              id: crypto.randomUUID(),
+              ...recipeInput,
+              created_at: new Date(),
+              ingredients: generatedRecipe.ingredients
+                .map((generatedIngredient, index) => {
+                  const matchingIngredient =
+                    uniqueIngredients.find((ing) =>
+                      generatedIngredient.name
+                        .toLowerCase()
+                        .includes(ing.name.toLowerCase())
+                    ) || uniqueIngredients[index];
+
+                  if (!matchingIngredient) return null;
+
+                  let quantity = "1";
+                  let unit = matchingIngredient.unit_of_measure || "unit";
+
+                  if (generatedIngredient.quantity) {
+                    const qtyMatch =
+                      generatedIngredient.quantity.match(/(\d+\.?\d*)/);
+                    if (qtyMatch && qtyMatch[1]) {
+                      quantity = qtyMatch[1];
+                    }
+
+                    const unitMatch = generatedIngredient.quantity.match(
+                      /(\d+\.?\d*)\s+([a-zA-Z]+)/
+                    );
+                    if (unitMatch && unitMatch[2]) {
+                      unit = unitMatch[2].toLowerCase();
+                    }
+                  }
+
+                  return {
+                    ingredientId: matchingIngredient.id,
+                    ingredient: {
+                      id: matchingIngredient.id,
+                      name: matchingIngredient.name,
+                      image_url: `/ingredients/${matchingIngredient.name
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")}.jpg`,
+                      category: matchingIngredient.category,
+                      unit_of_measure: unit,
+                    },
+                    quantity: quantity,
+                    unit: unit,
+                    notes: generatedIngredient.quantity || "to taste",
+                  };
+                })
+                .filter(Boolean),
+            };
+          }
 
           return createdRecipe;
         } catch (error) {
@@ -589,7 +659,7 @@ const resolvers = {
               .filter(Boolean),
             rating: 0,
             featured: false,
-            user_id: userId,
+            user_id: userId ?? null,
           };
 
           const ingredientData = validIngredients.map((ing) => ({

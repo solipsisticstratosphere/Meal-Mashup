@@ -200,6 +200,27 @@ export default function CreateRecipePage() {
 
           if (result.data?.generateRecipe) {
             recipe = result.data.generateRecipe;
+
+            // Show toast notification for unauthenticated users
+            if (recipe && !recipe.user_id) {
+              toast(
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    Recipe generated successfully!
+                  </span>
+                  <span className="text-sm mt-1">
+                    Create an account to save your recipes and share them with
+                    others.
+                  </span>
+                </div>,
+                {
+                  duration: 5000,
+                  position: "top-center",
+                  className:
+                    "bg-amber-50 text-amber-800 border border-amber-200",
+                }
+              );
+            }
           } else {
             recipe = await generateRecipeUsingHuggingFace();
           }

@@ -26,7 +26,6 @@ export default function Button({
 }: ButtonProps) {
   const isMobile = useIsMobile();
 
-  // Automatically use larger size on mobile for better touch targets
   const effectiveSize = isMobile && size === "sm" ? "md" : size;
 
   const baseStyles =

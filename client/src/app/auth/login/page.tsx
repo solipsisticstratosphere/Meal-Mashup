@@ -96,7 +96,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError(errorMessages[result.error] || errorMessages.default);
       } else if (result?.ok) {
-        window.location.href = returnUrl;
+        router.push(returnUrl);
       }
     } catch (err: unknown) {
       const error = err as Error;

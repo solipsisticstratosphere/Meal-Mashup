@@ -170,6 +170,49 @@ export default function RecipeCard({
 
   const router = useRouter();
 
+  const parseQuantityFromAI = (
+    quantityStr: string
+  ): { value: number; unit: string } => {
+    const str = quantityStr.toString().toLowerCase().trim();
+
+    // Extract number and unit
+    const match = str.match(
+      /(\d+(?:\.\d+)?)\s*(kg|g|gram|grams|kilogram|kilograms|ml|l|liter|liters)?/i
+    );
+    if (!match) return { value: 0, unit: "g" };
+
+    const value = parseFloat(match[1]);
+    const unit = match[2] ? match[2].toLowerCase() : "g";
+
+    if (unit.startsWith("kg") || unit.startsWith("kilo")) {
+      return { value: value * 1000, unit: "g" };
+    } else if (unit.startsWith("g")) {
+      return { value, unit: "g" };
+    } else if (unit === "l" || unit.startsWith("liter")) {
+      return { value: value * 1000, unit: "ml" };
+    } else if (unit === "ml") {
+      return { value, unit: "ml" };
+    }
+
+    return { value, unit: "g" };
+  };
+
+  const formatQuantity = (value: number, unit: string): string => {
+    if (unit === "g") {
+      if (value >= 1000) {
+        const kgValue = value / 1000;
+        return `${kgValue.toFixed(1).replace(/\.0$/, "")}kg`;
+      }
+      return `${Math.round(value)}g`;
+    } else if (unit === "ml") {
+      if (value >= 1000) {
+        return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}L`;
+      }
+      return `${Math.round(value)}ml`;
+    }
+    return `${value} ${unit}`;
+  };
+
   const gradients = [
     "from-amber-200 to-orange-400",
     "from-rose-300 to-fuchsia-500",
@@ -370,43 +413,13 @@ export default function RecipeCard({
   const safeRecipe: Recipe = {
     ...recipe,
     ingredients: (recipe.ingredients || []).map((item) => {
-      const getDefaultUnit = (ingredientName: string): string => {
-        const name = ingredientName.toLowerCase();
-        if (
-          name.includes("pepper") ||
-          name.includes("carrot") ||
-          name.includes("zucchini") ||
-          name.includes("onion") ||
-          name.includes("potato") ||
-          name.includes("apple") ||
-          name.includes("tomato")
-        ) {
-          return "pc"; // piece
-        } else if (
-          name.includes("milk") ||
-          name.includes("water") ||
-          name.includes("oil") ||
-          name.includes("juice")
-        ) {
-          return "ml";
-        } else if (
-          name.includes("flour") ||
-          name.includes("sugar") ||
-          name.includes("salt") ||
-          name.includes("rice")
-        ) {
-          return "g";
-        }
-        return "";
-      };
-
       const ingredientName = item.ingredient?.name || "Unknown Ingredient";
 
-      const unitOfMeasure =
-        item.ingredient?.unit_of_measure ||
-        (item as unknown as { unit?: string }).unit ||
-        (item.ingredient as unknown as { unit?: string }).unit ||
-        getDefaultUnit(ingredientName);
+      let quantityDisplay = "";
+      if (item.quantity) {
+        const { value, unit } = parseQuantityFromAI(item.quantity.toString());
+        quantityDisplay = formatQuantity(value, unit);
+      }
 
       const recipeIngredientItem: RecipeIngredient = {
         ingredientId: item.ingredientId,
@@ -415,9 +428,9 @@ export default function RecipeCard({
           id: item.ingredient?.id || "Unknown Ingredient",
           image_url: item.ingredient?.image_url || "Unknown Ingredient",
           category: item.ingredient?.category || "Unknown Ingredient",
-          unit_of_measure: unitOfMeasure,
+          unit_of_measure: "g",
         },
-        quantity: item.quantity || "amount not specified",
+        quantity: quantityDisplay || "amount not specified",
       };
 
       return recipeIngredientItem;
@@ -553,25 +566,6 @@ export default function RecipeCard({
             {safeRecipe.ingredients.length > 0 ? (
               <ul className="grid gap-3 pl-2">
                 {safeRecipe.ingredients.map((item, index) => {
-                  let quantityDisplay = "";
-                  if (item.quantity) {
-                    const numericQuantity = parseFloat(item.quantity);
-
-                    if (Number.isInteger(numericQuantity)) {
-                      quantityDisplay = numericQuantity.toFixed(0);
-                    } else {
-                      const formattedNum = numericQuantity.toFixed(2);
-                      quantityDisplay = formattedNum.replace(/\.?0+$/, "");
-                    }
-
-                    if (
-                      item.ingredient.unit_of_measure &&
-                      item.ingredient.unit_of_measure.trim() !== ""
-                    ) {
-                      quantityDisplay += ` ${item.ingredient.unit_of_measure}`;
-                    }
-                  }
-
                   return (
                     <li
                       key={`ingredient-${index}-${item.ingredientId}`}
@@ -582,9 +576,9 @@ export default function RecipeCard({
                         <span className="font-medium text-slate-800">
                           {item.ingredient.name}
                         </span>
-                        {quantityDisplay && (
+                        {item.quantity && (
                           <span className="ml-2 text-slate-600">
-                            ({quantityDisplay})
+                            ({item.quantity})
                           </span>
                         )}
                       </div>

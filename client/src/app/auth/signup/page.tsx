@@ -144,11 +144,11 @@ export default function SignupPage() {
         console.error("[SignupPage] Auto sign in failed:", signInResult.error);
 
         setTimeout(() => {
-          window.location.href = "/auth/login";
+          router.push("/auth/login");
         }, 2000);
       } else if (signInResult?.ok) {
         setTimeout(() => {
-          window.location.href = returnUrl;
+          router.push(returnUrl);
         }, 1000);
       }
     } catch (err: unknown) {

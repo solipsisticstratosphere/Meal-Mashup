@@ -22,8 +22,15 @@ export interface Ingredient {
 
 export interface RecipeIngredient {
   ingredientId: string;
-  ingredient: Ingredient;
-  quantity: string;
+  ingredient: {
+    id: string;
+    name: string;
+    image_url?: string;
+    category?: string;
+    unit_of_measure?: string;
+  };
+  quantity: string | number;
+  unit?: string;
 }
 
 export type DifficultyLevel = "Easy" | "Medium" | "Hard";
