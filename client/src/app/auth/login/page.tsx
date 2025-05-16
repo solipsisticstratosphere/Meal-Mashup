@@ -7,6 +7,13 @@ import { signIn, useSession } from "next-auth/react";
 import { ArrowRight, Mail, Lock, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import Button from "@/components/ui/Button";
 
+// Authentication error dictionary
+const errorMessages: Record<string, string> = {
+  CredentialsSignin:
+    "Invalid email or password. Please check your credentials.",
+  default: "An error occurred during login. Please try again.",
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +27,14 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
+
+  // Get error from URL if present (redirected from NextAuth)
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setError(errorMessages[errorParam] || errorMessages.default);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (status === "authenticated" && session) {
@@ -79,7 +94,7 @@ export default function LoginPage() {
       console.log("[LoginPage] Signin result:", result);
 
       if (result?.error) {
-        setError(result.error || "Invalid credentials");
+        setError(errorMessages[result.error] || errorMessages.default);
       } else if (result?.ok) {
         window.location.href = returnUrl;
       }
@@ -107,7 +122,7 @@ export default function LoginPage() {
 
         <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-2">
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 mb-2">
               Welcome Back
             </h1>
             <p className="text-slate-600">

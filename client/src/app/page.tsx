@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { FoodCard } from "../components/main/food-card";
 import { HeroPattern } from "../components/main/hero-pattern";
 import { FeatureCard } from "../components/main/feature-card";
@@ -51,7 +51,7 @@ export default function Home() {
             variants={fadeIn}
           >
             <motion.h1
-              className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-6"
+              className="text-5xl md:text-6xl lg:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 mb-6"
               variants={{
                 hidden: { opacity: 0, y: -20 },
                 visible: {
@@ -105,7 +105,7 @@ export default function Home() {
                   variant="outline"
                   size="lg"
                   className="w-full"
-                  icon={<ChevronRight className="w-5 h-5" />}
+                  icon={<ArrowRight className="w-5 h-5" />}
                 >
                   Browse Popular
                 </Button>

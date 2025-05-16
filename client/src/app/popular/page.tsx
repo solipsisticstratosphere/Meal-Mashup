@@ -27,7 +27,7 @@ export default function PopularRecipesPage() {
           </p>
         </div>
         <Link href="/create-recipe">
-          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl shadow-md  transition-all">
+          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl shadow-md transition-all hover:brightness-110">
             <PlusCircle className="w-5 h-5 mr-2" />
             Create Your Own
           </Button>

@@ -201,7 +201,7 @@ export default function SignupPage() {
           ) : (
             <>
               <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-2">
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 mb-2">
                   Create Account
                 </h1>
                 <p className="text-slate-600">

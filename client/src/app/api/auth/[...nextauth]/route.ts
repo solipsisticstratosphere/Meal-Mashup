@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           console.log("Missing credentials");
-          return null;
+          throw new Error("Please enter email and password");
         }
 
         try {
@@ -61,7 +61,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!users || users.length === 0) {
             console.log("User not found:", credentials.email);
-            return null;
+            throw new Error("CredentialsSignin");
           }
 
           const user = users[0];
@@ -74,7 +74,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!isPasswordValid) {
             console.log("Invalid password for user:", credentials.email);
-            return null;
+            throw new Error("CredentialsSignin");
           }
 
           console.log("Login successful for:", credentials.email);
@@ -87,8 +87,10 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           };
         } catch (error) {
-          console.error("Authentication error:", error);
-          return null;
+          if (error instanceof Error && error.message !== "CredentialsSignin") {
+            console.error("Authentication error:", error);
+          }
+          throw error;
         }
       },
     }),

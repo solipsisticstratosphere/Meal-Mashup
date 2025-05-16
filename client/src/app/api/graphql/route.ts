@@ -21,6 +21,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
+import { sendPasswordResetEmail } from "@/lib/email";
+import { hashPassword, verifyPassword } from "@/lib/auth-utils";
 
 export const runtime = "nodejs";
 
@@ -77,6 +79,14 @@ const typeDefs = `
     DISLIKE
     like
     dislike
+  }
+
+  type User {
+    id: ID!
+    email: String!
+    name: String
+    role: String
+    image_url: String
   }
 
   type Ingredient {
@@ -154,6 +164,7 @@ const typeDefs = `
     myRecipes: [Recipe!]!
     recipeVotes(recipeId: ID!): RecipeVotes!
     savedRecipes: [Recipe!]!
+    me: User
   }
 
   type SaveRecipeResult {
@@ -163,11 +174,22 @@ const typeDefs = `
     message: String
   }
 
+  type AuthResult {
+    success: Boolean!
+    message: String
+  }
+
   type Mutation {
     generateRecipe(ingredients: [ID!]!): Recipe!
     voteRecipe(recipeId: ID!, vote: VoteType): Recipe!
     createRecipe(recipe: RecipeInput!, ingredients: [RecipeIngredientInput!]!): Recipe!
     saveRecipe(recipeId: ID!): SaveRecipeResult!
+    deleteRecipe(id: ID!): AuthResult!
+    updateRecipe(id: ID!, recipe: RecipeInput!): Recipe!
+    forgotPassword(email: String!): AuthResult!
+    resetPassword(token: String!, password: String!): AuthResult!
+    updateProfile(name: String, image_url: String): User!
+    changePassword(currentPassword: String!, newPassword: String!): AuthResult!
   }
 `;
 
@@ -257,7 +279,6 @@ const resolvers = {
       }
 
       try {
-       
         const savedRecipes = await prisma.$queryRaw`
           SELECT r.*, true as "isSaved"
           FROM recipes r
@@ -265,12 +286,18 @@ const resolvers = {
           WHERE usr.user_id = ${user.id}
         `;
 
-        
         return savedRecipes || [];
       } catch (error) {
         console.error("Error fetching saved recipes:", error);
         return [];
       }
+    },
+    me: async () => {
+      const user = await getUserFromSession();
+      if (!user) {
+        return null;
+      }
+      return user;
     },
   },
   Recipe: {
@@ -811,7 +838,6 @@ const resolvers = {
           };
         }
 
-        
         const existingSavedRecipe = await prisma.$queryRaw`
           SELECT * FROM user_saved_recipes 
           WHERE user_id = ${user.id} AND recipe_id = ${recipeId}
@@ -823,7 +849,6 @@ const resolvers = {
           Array.isArray(existingSavedRecipe) &&
           existingSavedRecipe.length > 0
         ) {
-       
           await prisma.$executeRaw`
             DELETE FROM user_saved_recipes 
             WHERE user_id = ${user.id} AND recipe_id = ${recipeId}
@@ -836,7 +861,6 @@ const resolvers = {
             message: "Recipe removed from saved recipes",
           };
         } else {
-         
           await prisma.$executeRaw`
             INSERT INTO user_saved_recipes (id, user_id, recipe_id, created_at)
             VALUES (${crypto.randomUUID()}, ${user.id}, ${recipeId}, NOW())
@@ -857,6 +881,254 @@ const resolvers = {
           message: `Error saving recipe: ${
             error instanceof Error ? error.message : String(error)
           }`,
+        };
+      }
+    },
+    deleteRecipe: async (_: unknown, { id }: { id: string }) => {
+      try {
+        const recipe = await prisma.recipe.findUnique({
+          where: { id },
+        });
+
+        if (!recipe) {
+          return {
+            success: false,
+            message: `Recipe with ID ${id} not found`,
+          };
+        }
+
+        await prisma.recipe.delete({
+          where: { id },
+        });
+
+        return {
+          success: true,
+          message: "Recipe deleted successfully",
+        };
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+        return {
+          success: false,
+          message: `Error deleting recipe: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
+      }
+    },
+    updateRecipe: async (
+      _: unknown,
+      { id, recipe }: { id: string; recipe: RecipeInput }
+    ) => {
+      try {
+        const updatedRecipe = await prisma.recipe.update({
+          where: { id },
+          data: recipe,
+        });
+
+        return updatedRecipe;
+      } catch (error) {
+        console.error("Error updating recipe:", error);
+        throw error;
+      }
+    },
+    forgotPassword: async (_: unknown, { email }: { email: string }) => {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (!user) {
+          return {
+            success: false,
+            message: "No account found with that email address",
+          };
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        await prisma.$executeRaw`
+          INSERT INTO password_reset_tokens (id, token, user_id, expires_at, created_at, is_used)
+          VALUES (${crypto.randomUUID()}, ${token}, ${
+          user.id
+        }, ${expiresAt}, NOW(), false)
+        `;
+
+        const emailResult = await sendPasswordResetEmail(email, token);
+
+        if (!emailResult.success) {
+          console.error(
+            "Failed to send password reset email:",
+            emailResult.error
+          );
+          return {
+            success: false,
+            message: "Failed to send reset email. Please try again later.",
+          };
+        }
+
+        if (emailResult.messageUrl) {
+          console.log("Email preview URL:", emailResult.messageUrl);
+        }
+
+        return {
+          success: true,
+          message: "Password reset link has been sent to your email",
+        };
+      } catch (error) {
+        console.error("Error in forgotPassword:", error);
+        return {
+          success: false,
+          message: "An error occurred. Please try again later.",
+        };
+      }
+    },
+    resetPassword: async (
+      _: unknown,
+      { token, password }: { token: string; password: string }
+    ) => {
+      try {
+        const resetTokens = await prisma.$queryRaw`
+          SELECT rt.*, u.id as user_id, u.email
+          FROM password_reset_tokens rt
+          JOIN users u ON rt.user_id = u.id
+          WHERE rt.token = ${token}
+          LIMIT 1
+        `;
+
+        if (
+          !resetTokens ||
+          !Array.isArray(resetTokens) ||
+          resetTokens.length === 0
+        ) {
+          return {
+            success: false,
+            message: "Invalid or expired token",
+          };
+        }
+
+        const resetToken = resetTokens[0];
+
+        if (
+          new Date(resetToken.expires_at) < new Date() ||
+          resetToken.is_used
+        ) {
+          return {
+            success: false,
+            message: "Token has expired or already been used",
+          };
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        await prisma.user.update({
+          where: { id: resetToken.user_id },
+          data: { password: hashedPassword },
+        });
+
+        await prisma.$executeRaw`
+          UPDATE password_reset_tokens
+          SET is_used = true
+          WHERE id = ${resetToken.id}
+        `;
+
+        return {
+          success: true,
+          message: "Password has been reset successfully",
+        };
+      } catch (error) {
+        console.error("Error in resetPassword:", error);
+        return {
+          success: false,
+          message: "An error occurred. Please try again later.",
+        };
+      }
+    },
+    updateProfile: async (
+      _: unknown,
+      { name, image_url }: { name: string; image_url: string }
+    ) => {
+      try {
+        const user = await getUserFromSession();
+
+        if (!user) {
+          throw new Error("Authentication required to update profile");
+        }
+
+        const updatedUser = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            name,
+            image_url,
+          },
+        });
+
+        return updatedUser;
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
+    },
+    changePassword: async (
+      _: unknown,
+      {
+        currentPassword,
+        newPassword,
+      }: { currentPassword: string; newPassword: string }
+    ) => {
+      try {
+        const user = await getUserFromSession();
+
+        if (!user) {
+          throw new Error("Authentication required to change password");
+        }
+
+        const existingUser = await prisma.user.findUnique({
+          where: { id: user.id },
+        });
+
+        if (!existingUser) {
+          throw new Error("User not found");
+        }
+
+        if (!existingUser.password) {
+          return {
+            success: false,
+            message: "Cannot change password for accounts without a password",
+          };
+        }
+
+        const isPasswordValid = await verifyPassword(
+          currentPassword,
+          existingUser.password
+        );
+
+        if (!isPasswordValid) {
+          return {
+            success: false,
+            message: "Current password is incorrect",
+          };
+        }
+
+        const hashedNewPassword = await hashPassword(newPassword);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            password: hashedNewPassword,
+          },
+        });
+
+        return {
+          success: true,
+          message: "Password has been changed successfully",
+        };
+      } catch (error) {
+        console.error("Error changing password:", error);
+        return {
+          success: false,
+          message: "An error occurred. Please try again later.",
         };
       }
     },

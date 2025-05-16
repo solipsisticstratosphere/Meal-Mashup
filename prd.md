@@ -364,3 +364,5 @@ Mobile app version
 User-contributed ingredients
 Recipe modification capabilities
 Kitchen inventory management
+
+1)Profile Update

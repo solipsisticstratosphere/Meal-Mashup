@@ -29,6 +29,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
+import { useRouter } from "next/navigation";
 
 const styles = StyleSheet.create({
   page: {
@@ -166,6 +167,8 @@ export default function RecipeCard({
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
   const [deleteRecipeMutation] = useMutation(DELETE_RECIPE);
+
+  const router = useRouter();
 
   const gradients = [
     "from-amber-200 to-orange-400",
@@ -341,7 +344,7 @@ export default function RecipeCard({
   };
 
   const handleEdit = () => {
-    window.location.href = `/recipes/edit/${recipe.id}`;
+    router.push(`/recipes/edit/${recipe.id}`);
   };
 
   const handleDelete = async () => {
@@ -352,14 +355,14 @@ export default function RecipeCard({
         });
 
         if (data?.deleteRecipe?.success) {
-          alert("Recipe deleted successfully!");
-          window.location.href = "/my-recipes";
+          toast.success("Recipe deleted successfully!");
+          router.push("/my-recipes");
         } else {
-          alert(data?.deleteRecipe?.message || "Failed to delete recipe");
+          toast.error(data?.deleteRecipe?.message || "Failed to delete recipe");
         }
       } catch (error) {
         console.error("Error deleting recipe:", error);
-        alert("Failed to delete recipe. Please try again.");
+        toast.error("Failed to delete recipe. Please try again.");
       }
     }
   };

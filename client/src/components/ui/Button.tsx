@@ -1,7 +1,8 @@
 "use client";
 
-import { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
+import { useIsMobile } from "../../hooks/useMobile";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -23,16 +24,22 @@ export default function Button({
   icon,
   ...props
 }: ButtonProps) {
+  const isMobile = useIsMobile();
+
+  // Automatically use larger size on mobile for better touch targets
+  const effectiveSize = isMobile && size === "sm" ? "md" : size;
+
   const baseStyles =
     "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
 
   const variantStyles = {
-    primary: "bg-rose-500 text-white hover:bg-rose-600",
-    secondary: "bg-fuchsia-400 text-white hover:bg-fuchsia-500",
+    primary: "bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700",
+    secondary: "bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700",
     outline:
-      "bg-transparent border border-rose-200 text-rose-600 hover:bg-rose-50",
-    ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
-    danger: "bg-red-500 text-white hover:bg-red-600",
+      "bg-transparent border border-rose-200 text-rose-600 hover:bg-rose-100 active:bg-rose-100",
+    ghost:
+      "bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200",
+    danger: "bg-red-500 text-white hover:bg-red-600 active:bg-red-700",
   };
 
   const sizeStyles = {
@@ -41,6 +48,12 @@ export default function Button({
     lg: "h-12 px-6 text-lg",
   };
 
+  // Enhanced mobile styles with better touch targets
+  const mobileStyles = isMobile ? "min-h-[44px] min-w-[44px] py-2.5" : "";
+
+  // Adjust icon spacing based on size and device
+  const iconSpacing = isMobile ? "mr-3" : "mr-2";
+
   const widthStyle = fullWidth ? "w-full" : "";
 
   return (
@@ -48,7 +61,8 @@ export default function Button({
       className={twMerge(
         baseStyles,
         variantStyles[variant],
-        sizeStyles[size],
+        sizeStyles[effectiveSize],
+        mobileStyles,
         widthStyle,
         className
       )}
@@ -77,7 +91,7 @@ export default function Button({
           ></path>
         </svg>
       )}
-      {icon && !isLoading && <span className="mr-2">{icon}</span>}
+      {icon && !isLoading && <span className={iconSpacing}>{icon}</span>}
       {children}
     </button>
   );

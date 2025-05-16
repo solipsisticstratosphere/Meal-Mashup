@@ -4,12 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { useMutation } from "@apollo/client";
+import { FORGOT_PASSWORD } from "@/lib/graphql";
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const [forgotPassword] = useMutation(FORGOT_PASSWORD);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +27,18 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const { data } = await forgotPassword({
+        variables: { email },
+      });
 
-      setIsSubmitted(true);
+      if (data.forgotPassword.success) {
+        setIsSubmitted(true);
+      } else {
+        setError(
+          data.forgotPassword.message ||
+            "Something went wrong. Please try again."
+        );
+      }
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || "Something went wrong. Please try again.");
@@ -51,7 +64,7 @@ export default function ForgotPasswordPage() {
           {!isSubmitted ? (
             <>
               <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-600 via-fuchsia-500 to-orange-500 mb-2">
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 mb-2">
                   Reset Password
                 </h1>
                 <p className="text-slate-600">
