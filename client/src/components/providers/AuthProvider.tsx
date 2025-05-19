@@ -11,7 +11,6 @@ import {
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 
-// Define the user context type
 interface AuthContextType {
   user:
     | (User & {
@@ -23,17 +22,14 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-// Create the context
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
 });
 
-// Create a hook to use the auth context
 export const useAuth = () => useContext(AuthContext);
 
-// Create the auth user provider component
 const AuthUserProvider = ({ children }: { children: ReactNode }) => {
   const { data: session, status } = useSession();
   const [user, setUser] = useState<
@@ -63,7 +59,6 @@ const AuthUserProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Main AuthProvider component
 interface AuthProviderProps {
   children: ReactNode;
 }

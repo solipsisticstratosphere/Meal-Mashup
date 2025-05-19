@@ -70,7 +70,7 @@ export default function MyRecipes() {
                 <Link href="/create-recipe">
                   <Button
                     variant="primary"
-                    className="bg-gradient-to-r from-amber-500 to-orange-600"
+                    className="bg-amber-500 hover:bg-amber-600"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Create New Recipe

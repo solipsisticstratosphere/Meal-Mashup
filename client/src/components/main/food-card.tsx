@@ -53,7 +53,7 @@ export function FoodCard({
   const isAuthenticated = status === "authenticated";
   const href = from ? `/recipes/${id}?from=${from}` : `/recipes/${id}`;
 
-  const totalVotes = rating || currentLikes - currentDislikes;
+  const totalVotes = Math.max(0, rating || currentLikes - currentDislikes);
 
   const {
     votedRecipes,
@@ -225,7 +225,7 @@ export function FoodCard({
     <div className="block">
       <div
         className={cn(
-          "group rounded-xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300",
+          "group rounded-xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-300 ",
           featured ? "md:scale-105 ring-2 ring-rose-200" : ""
         )}
       >
@@ -274,7 +274,7 @@ export function FoodCard({
         <div className="p-5">
           {isClickable ? (
             <Link href={href}>
-              <h3 className="font-bold text-lg mb-2">{title}</h3>
+              <h3 className="font-bold text-lg mb-2 truncate">{title}</h3>
             </Link>
           ) : (
             <h3 className="font-bold text-lg mb-2">{title}</h3>

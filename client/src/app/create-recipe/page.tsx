@@ -201,7 +201,6 @@ export default function CreateRecipePage() {
           if (result.data?.generateRecipe) {
             recipe = result.data.generateRecipe;
 
-            // Show toast notification for unauthenticated users
             if (recipe && !recipe.user_id) {
               toast(
                 <div className="flex flex-col">

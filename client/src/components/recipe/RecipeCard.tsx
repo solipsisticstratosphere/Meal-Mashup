@@ -5,7 +5,12 @@ import React from "react";
 import Button from "@/components/ui/Button";
 import { useRecipeStore } from "@/store/recipeStore";
 import { useMutation } from "@apollo/client";
-import { VOTE_RECIPE, SAVE_RECIPE, DELETE_RECIPE } from "@/lib/graphql";
+import {
+  VOTE_RECIPE,
+  SAVE_RECIPE,
+  DELETE_RECIPE,
+  GET_MY_RECIPES,
+} from "@/lib/graphql";
 import { useState, useEffect } from "react";
 import {
   Download,
@@ -29,7 +34,7 @@ import {
   View,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const styles = StyleSheet.create({
   page: {
@@ -166,16 +171,17 @@ export default function RecipeCard({
 
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
-  const [deleteRecipeMutation] = useMutation(DELETE_RECIPE);
+  const [deleteRecipeMutation, { loading: deletingRecipe }] =
+    useMutation(DELETE_RECIPE);
 
   const router = useRouter();
+  const pathname = usePathname();
 
   const parseQuantityFromAI = (
     quantityStr: string
   ): { value: number; unit: string } => {
     const str = quantityStr.toString().toLowerCase().trim();
 
-    // Extract number and unit
     const match = str.match(
       /(\d+(?:\.\d+)?)\s*(kg|g|gram|grams|kilogram|kilograms|ml|l|liter|liters)?/i
     );
@@ -391,21 +397,64 @@ export default function RecipeCard({
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this recipe?")) {
+    if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
       try {
-        const { data } = await deleteRecipeMutation({
+        await deleteRecipeMutation({
           variables: { id: recipe.id },
+
+          update: (cache) => {
+            const myRecipesQueryOptions = { query: GET_MY_RECIPES };
+            try {
+              const existingMyRecipes = cache.readQuery<{
+                myRecipes: Recipe[];
+              }>(myRecipesQueryOptions);
+              if (existingMyRecipes && existingMyRecipes.myRecipes) {
+                cache.writeQuery({
+                  ...myRecipesQueryOptions,
+                  data: {
+                    myRecipes: existingMyRecipes.myRecipes.filter(
+                      (r) => r.id !== recipe.id
+                    ),
+                  },
+                });
+              }
+            } catch (e) {
+              console.warn(
+                "Cache read for GET_MY_RECIPES failed, possibly not fetched yet:",
+                e
+              );
+            }
+
+            const recipeCacheId = cache.identify({
+              __typename: "Recipe",
+              id: recipe.id,
+            });
+            if (recipeCacheId) {
+              cache.evict({ id: recipeCacheId });
+              cache.gc();
+            }
+          },
         });
 
-        if (data?.deleteRecipe?.success) {
-          toast.success("Recipe deleted successfully!");
+        toast.success(`Recipe "${recipe.title}" deleted successfully!`);
+
+        const isOnThisRecipeDetailPage = pathname.startsWith(
+          `/recipes/${recipe.id}`
+        );
+
+        const isOnThisRecipeEditPage =
+          pathname.startsWith(`/recipes/edit/${recipe.id}`) ||
+          pathname.startsWith(`/my-recipes/edit/${recipe.id}`);
+
+        if (isOnThisRecipeDetailPage || isOnThisRecipeEditPage) {
           router.push("/my-recipes");
-        } else {
-          toast.error(data?.deleteRecipe?.message || "Failed to delete recipe");
         }
       } catch (error) {
         console.error("Error deleting recipe:", error);
-        toast.error("Failed to delete recipe. Please try again.");
+        toast.error(
+          "Failed to delete recipe. " +
+            (error instanceof Error ? error.message : "Unknown error")
+        );
       }
     }
   };
@@ -709,6 +758,7 @@ export default function RecipeCard({
                 variant="outline"
                 size="sm"
                 onClick={handleDelete}
+                disabled={deletingRecipe}
                 className="bg-red-50 text-red-600"
               >
                 <svg

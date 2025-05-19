@@ -6,9 +6,20 @@ import { useSession, signOut } from "next-auth/react";
 import { useMutation, useQuery } from "@apollo/client";
 import { CURRENT_USER, UPDATE_PROFILE, CHANGE_PASSWORD } from "@/lib/graphql";
 import { useRouter } from "next/navigation";
-import { Camera, Edit2, LogOut, User, Shield, Key } from "lucide-react";
+import {
+  Camera,
+  Edit2,
+  LogOut,
+  User,
+  Shield,
+  Key,
+  ArrowLeft,
+  Save,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import Button from "@/components/ui/Button";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ProfilePage = () => {
   const { data: session, update: updateSession } = useSession();
@@ -21,6 +32,7 @@ const ProfilePage = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +49,18 @@ const ProfilePage = () => {
       setImageUrl(session.user.image || "");
     }
   }, [data, session]);
+
+  useEffect(() => {
+    if (newPassword.length === 0) {
+      setPasswordStrength(0);
+    } else if (newPassword.length < 8) {
+      setPasswordStrength(1);
+    } else if (/^[a-zA-Z0-9]+$/.test(newPassword)) {
+      setPasswordStrength(2);
+    } else {
+      setPasswordStrength(3);
+    }
+  }, [newPassword]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +148,32 @@ const ProfilePage = () => {
     await signOut({ callbackUrl: "/" });
   };
 
+  const getPasswordStrengthColor = () => {
+    switch (passwordStrength) {
+      case 1:
+        return "bg-red-500";
+      case 2:
+        return "bg-yellow-500";
+      case 3:
+        return "bg-green-500";
+      default:
+        return "bg-gray-200";
+    }
+  };
+
+  const getPasswordStrengthText = () => {
+    switch (passwordStrength) {
+      case 1:
+        return "Weak";
+      case 2:
+        return "Medium";
+      case 3:
+        return "Strong";
+      default:
+        return "";
+    }
+  };
+
   if (loadingUser && !data) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
@@ -134,248 +184,352 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
-      <h1 className="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-        My Profile
-      </h1>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="relative mb-8">
+        <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
+          My Profile
+        </h1>
+        {(isEditing || isChangingPassword) && (
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              setIsChangingPassword(false);
+            }}
+            className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-500 hover:text-amber-600 transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+        )}
+      </div>
 
-      <div className="p-8">
-        {isEditing ? (
-          <form onSubmit={handleProfileUpdate} className="space-y-8">
-            <div className="flex flex-col items-center mb-6">
-              <div className="relative group">
-                {imageUrl ? (
-                  <img
-                    src={imageUrl || "/placeholder.svg"}
-                    alt={name || "User"}
-                    className="h-32 w-32 rounded-full object-cover border-4 border-amber-200 shadow-md"
-                  />
-                ) : (
-                  <div className="h-32 w-32 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 shadow-md">
-                    <User className="h-16 w-16 text-amber-500" />
+      <div className="bg-white rounded-2xl shadow-xl p-8 transition-all">
+        <AnimatePresence mode="wait">
+          {isEditing ? (
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              onSubmit={handleProfileUpdate}
+              className="space-y-8"
+            >
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative group cursor-pointer">
+                  {imageUrl ? (
+                    <div className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-amber-200 shadow-md">
+                      <img
+                        src={imageUrl || "/placeholder.svg"}
+                        alt={name || "User"}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-32 w-32 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 shadow-md">
+                      <User className="h-16 w-16 text-amber-500" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 rounded-full bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Camera className="h-8 w-8 text-white" />
                   </div>
-                )}
-                <div className="absolute inset-0 rounded-full bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="h-8 w-8 text-white" />
+                </div>
+
+                <div className="mt-6 w-full max-w-md">
+                  <label
+                    htmlFor="imageUrl"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Profile Image URL
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="imageUrl"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="block w-full pl-4 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="https://example.com/your-image.jpg"
+                    />
+                    {imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        aria-label="Clear image URL"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 w-full max-w-md">
+              <div>
                 <label
-                  htmlFor="imageUrl"
+                  htmlFor="name"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Profile Image URL
+                  Name
                 </label>
                 <input
                   type="text"
-                  id="imageUrl"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="https://example.com/your-image.jpg"
+                  placeholder="Your name"
                 />
               </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Your name"
-              />
-            </div>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white disabled:opacity-50 transition-all"
+                  isLoading={loading}
+                >
+                  <Save className="h-5 w-5 mr-2" />
+                  Save Changes
+                </Button>
 
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white  disabled:opacity-50 transition-all"
-                isLoading={loading}
-              >
-                Save Changes
-              </Button>
-
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setIsEditing(false)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : isChangingPassword ? (
-          <form
-            onSubmit={handlePasswordChange}
-            className="space-y-6 max-w-md mx-auto"
-          >
-            <h2 className="text-xl font-bold text-center mb-6">
-              Change Password
-            </h2>
-
-            <div>
-              <label
-                htmlFor="currentPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Current Password
-              </label>
-              <input
-                type="password"
-                id="currentPassword"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                New Password
-              </label>
-              <input
-                type="password"
-                id="newPassword"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                minLength={8}
-                required
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                minLength={8}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button
-                type="submit"
-                className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 transition-all"
-                isLoading={loading}
-                disabled={loading}
-              >
-                <Key className="h-5 w-5 mr-2" />
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.form>
+          ) : isChangingPassword ? (
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              onSubmit={handlePasswordChange}
+              className="space-y-6 max-w-md mx-auto"
+            >
+              <h2 className="text-xl font-bold text-center mb-6">
                 Change Password
-              </Button>
-
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setIsChangingPassword(false)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <div className="flex flex-col items-center">
-            <div className="mb-8">
-              {imageUrl ? (
-                <img
-                  src={imageUrl || "/placeholder.svg"}
-                  alt={name || "User"}
-                  className="h-40 w-40 rounded-full object-cover border-4 border-amber-200 shadow-lg"
-                />
-              ) : (
-                <div className="h-40 w-40 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 shadow-lg">
-                  <User className="h-20 w-20 text-amber-500" />
-                </div>
-              )}
-            </div>
-
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                {name || "No name set"}
               </h2>
-              <p className="text-gray-600 text-lg">{session?.user?.email}</p>
-              <div className="mt-2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm py-1 px-3 rounded-full">
-                <Shield className="w-4 h-4" />
-                {session?.user?.role || "User"}
-              </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
-              <Button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white  transition-all"
-              >
-                <Edit2 className="h-5 w-5 mr-2" />
-                Edit Profile
-              </Button>
-
-              <Button
-                onClick={() => setIsChangingPassword(true)}
-                variant="outline"
-                className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all"
-              >
-                <Key className="h-5 w-5 mr-2" />
-                Change Password
-              </Button>
-            </div>
-
-            <div className="mt-4">
-              <Button
-                onClick={handleSignOut}
-                variant="outline"
-                className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-200 w-full max-w-md text-center">
-              <h3 className="font-medium text-gray-700 mb-2">Your Content</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Button
-                  onClick={() => router.push("/my-recipes")}
-                  variant="outline"
-                  className="w-full"
+              <div>
+                <label
+                  htmlFor="currentPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  My Recipes
-                </Button>
-                <Button
-                  onClick={() => router.push("/saved-recipes")}
-                  variant="outline"
-                  className="w-full"
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  id="currentPassword"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="newPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Saved Recipes
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  minLength={8}
+                  required
+                />
+                {newPassword && (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-gray-500">
+                        Password strength:
+                      </div>
+                      <div
+                        className="text-xs font-medium"
+                        style={{
+                          color:
+                            passwordStrength === 1
+                              ? "#ef4444"
+                              : passwordStrength === 2
+                              ? "#eab308"
+                              : passwordStrength === 3
+                              ? "#22c55e"
+                              : "#6b7280",
+                        }}
+                      >
+                        {getPasswordStrengthText()}
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${getPasswordStrengthColor()} transition-all duration-300 ease-in-out`}
+                        style={{ width: `${passwordStrength * 33.33}%` }}
+                      ></div>
+                    </div>
+                    <ul className="mt-2 text-xs text-gray-500 space-y-1">
+                      <li
+                        className={
+                          newPassword.length >= 8 ? "text-green-500" : ""
+                        }
+                      >
+                        • At least 8 characters
+                      </li>
+                      <li
+                        className={
+                          /[A-Z]/.test(newPassword) ? "text-green-500" : ""
+                        }
+                      >
+                        • At least one uppercase letter
+                      </li>
+                      <li
+                        className={
+                          /[0-9]/.test(newPassword) ? "text-green-500" : ""
+                        }
+                      >
+                        • At least one number
+                      </li>
+                      <li
+                        className={
+                          /[^A-Za-z0-9]/.test(newPassword)
+                            ? "text-green-500"
+                            : ""
+                        }
+                      >
+                        • At least one special character
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={`block w-full px-4 py-3 border ${
+                    confirmPassword && newPassword !== confirmPassword
+                      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-amber-500 focus:border-amber-500"
+                  } rounded-xl shadow-sm focus:outline-none focus:ring-2`}
+                  minLength={8}
+                  required
+                />
+                {confirmPassword && newPassword !== confirmPassword && (
+                  <p className="mt-1 text-sm text-red-500">
+                    Passwords don&apos;t match
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button
+                  type="submit"
+                  className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white disabled:opacity-50 transition-all"
+                  isLoading={loading}
+                  disabled={
+                    Boolean(loading) ||
+                    Boolean(confirmPassword && newPassword !== confirmPassword)
+                  }
+                >
+                  <Key className="h-5 w-5 mr-2" />
+                  Change Password
+                </Button>
+
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsChangingPassword(false)}
+                  disabled={loading}
+                >
+                  Cancel
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.form>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center"
+            >
+              <div className="mb-8 relative group">
+                {imageUrl ? (
+                  <div className="relative h-40 w-40 rounded-full overflow-hidden border-4 border-amber-200 shadow-lg transition-transform duration-300 group-hover:scale-105">
+                    <img
+                      src={imageUrl || "/placeholder.svg"}
+                      alt={name || "User"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-40 w-40 rounded-full bg-amber-100 flex items-center justify-center border-4 border-amber-200 shadow-lg transition-transform duration-300 group-hover:scale-105">
+                    <User className="h-20 w-20 text-amber-500" />
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center mb-10">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  {name || "No name set"}
+                </h2>
+                <p className="text-gray-600 text-lg mb-3">
+                  {session?.user?.email}
+                </p>
+                <div className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm py-1.5 px-4 rounded-full">
+                  <Shield className="w-4 h-4" />
+                  {session?.user?.role || "User"}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white transition-all"
+                >
+                  <Edit2 className="h-5 w-5 mr-2" />
+                  Edit Profile
+                </Button>
+
+                <Button
+                  onClick={() => setIsChangingPassword(true)}
+                  variant="outline"
+                  className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all"
+                >
+                  <Key className="h-5 w-5 mr-2" />
+                  Change Password
+                </Button>
+
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all sm:col-span-2"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

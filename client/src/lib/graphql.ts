@@ -126,7 +126,7 @@ export const GENERATE_RECIPE = gql`
 `;
 
 export const VOTE_RECIPE = gql`
-  mutation VoteRecipe($recipeId: ID!, $vote: VoteType!) {
+  mutation VoteRecipe($recipeId: ID!, $vote: VoteType) {
     voteRecipe(recipeId: $recipeId, vote: $vote) {
       id
       votes
