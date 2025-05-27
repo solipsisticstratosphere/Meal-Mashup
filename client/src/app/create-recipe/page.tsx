@@ -40,6 +40,21 @@ export default function CreateRecipePage() {
 
   const [generateRecipeMutation] = useMutation(GENERATE_RECIPE);
 
+  useEffect(() => {
+    return () => {
+      const storeState = useRecipeStore.getState();
+      const recipeToClear = storeState.currentRecipe;
+
+      if (
+        recipeToClear &&
+        (recipeToClear.user_id === undefined || recipeToClear.user_id === null)
+      ) {
+        storeState.setCurrentRecipe(null);
+        storeState.clearIngredients();
+      }
+    };
+  }, []);
+
   const generateUuid = () => {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0;
@@ -52,17 +67,18 @@ export default function CreateRecipePage() {
     try {
       const ingredientNames = selectedIngredients.map((ing) => ing.name);
 
-      const generatedRecipe = await generateRecipeFromIngredients(
+      const generatedRecipeData = await generateRecipeFromIngredients(
         ingredientNames
       );
 
       const recipe: Recipe = {
         id: generateUuid(),
-        title: generatedRecipe.title,
-        description: generatedRecipe.description,
+        title: generatedRecipeData.title,
+        description: generatedRecipeData.description,
         ingredients: selectedIngredients.map((ingredient) => {
-          const generatedIngredient = generatedRecipe.ingredients.find((gi) =>
-            gi.name.toLowerCase().includes(ingredient.name.toLowerCase())
+          const generatedIngredient = generatedRecipeData.ingredients.find(
+            (gi) =>
+              gi.name.toLowerCase().includes(ingredient.name.toLowerCase())
           );
 
           return {
@@ -71,9 +87,9 @@ export default function CreateRecipePage() {
             quantity: generatedIngredient?.quantity || "to taste",
           };
         }),
-        cookingMethod: generatedRecipe.cookingMethod,
-        preparationTime: generatedRecipe.preparationTime,
-        difficulty: generatedRecipe.difficulty as DifficultyLevel,
+        cookingMethod: generatedRecipeData.cookingMethod,
+        preparationTime: generatedRecipeData.preparationTime,
+        difficulty: generatedRecipeData.difficulty as DifficultyLevel,
         createdAt: new Date().toISOString(),
         votes: 0,
       };
@@ -225,7 +241,6 @@ export default function CreateRecipePage() {
           }
         } catch (error) {
           console.error("Error generating recipe:", error);
-
           recipe = await generateRecipeUsingHuggingFace();
         }
 

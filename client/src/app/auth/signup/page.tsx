@@ -32,6 +32,7 @@ export default function SignupPage() {
     password: "",
     confirmPassword: "",
   });
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
     if (status === "authenticated" && session) {
@@ -53,7 +54,13 @@ export default function SignupPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    if (name === "password") {
+      calculatePasswordStrength(value);
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -74,6 +81,56 @@ export default function SignupPage() {
       } else {
         toggleConfirmPasswordVisibility();
       }
+    }
+  };
+
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length > 0) {
+      strength = 1;
+    }
+    if (password.length >= 8) {
+      strength++;
+    }
+    if (/[A-Z]/.test(password)) {
+      strength++;
+    }
+    if (/[0-9]/.test(password)) {
+      strength++;
+    }
+    if (/[^A-Za-z0-9]/.test(password)) {
+      strength++;
+    }
+    setPasswordStrength(strength);
+  };
+
+  const getPasswordStrengthColor = (strength: number) => {
+    switch (strength) {
+      case 1:
+        return "bg-red-500";
+      case 2:
+        return "bg-orange-500";
+      case 3:
+        return "bg-yellow-500";
+      case 4:
+        return "bg-green-500";
+      default:
+        return "bg-gray-200";
+    }
+  };
+
+  const getPasswordStrengthText = (strength: number) => {
+    switch (strength) {
+      case 1:
+        return "Very Weak";
+      case 2:
+        return "Weak";
+      case 3:
+        return "Medium";
+      case 4:
+        return "Strong";
+      default:
+        return "";
     }
   };
 
@@ -286,28 +343,67 @@ export default function SignupPage() {
                       value={formData.password}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-10 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-rose-500 focus:border-rose-500 text-sm"
-                      placeholder="••••••••"
-                      minLength={8}
+                      placeholder="********"
                     />
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <button
-                        type="button"
-                        onClick={togglePasswordVisibility}
-                        onKeyDown={(e) => handleToggleKeyDown(e, "password")}
-                        className="text-slate-400 hover:text-slate-600 focus:outline-none focus:text-slate-600 transition-colors"
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                        tabIndex={0}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      onKeyDown={(e) => handleToggleKeyDown(e, "password")}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                      tabIndex={0}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
+                  {formData.password && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="text-xs text-slate-500">
+                          Password strength:
+                        </div>
+                        <div
+                          className="text-xs font-medium"
+                          style={{
+                            color:
+                              passwordStrength <= 1
+                                ? "#ef4444"
+                                : passwordStrength === 2
+                                ? "#f97316"
+                                : passwordStrength === 3
+                                ? "#eab308"
+                                : passwordStrength >= 4
+                                ? "#22c55e"
+                                : "",
+                          }}
+                        >
+                          {getPasswordStrengthText(passwordStrength)}
+                        </div>
+                      </div>
+                      <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${getPasswordStrengthColor(
+                            passwordStrength
+                          )} transition-all duration-300 ease-in-out`}
+                          style={{
+                            width: `${(passwordStrength / 4) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <ul className="mt-2 text-xs text-slate-500 space-y-1">
+                        <li>• At least 8 characters</li>
+                        <li>• At least one uppercase letter</li>
+                        <li>• At least one number</li>
+                        <li>• At least one special character</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

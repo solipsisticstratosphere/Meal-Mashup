@@ -9,13 +9,14 @@ import { useRouter } from "next/navigation";
 import {
   Camera,
   Edit2,
-  LogOut,
   User,
   Shield,
   Key,
   ArrowLeft,
   Save,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import Button from "@/components/ui/Button";
@@ -33,6 +34,10 @@ const ProfilePage = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -144,9 +149,9 @@ const ProfilePage = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
-  };
+  // const handleSignOut = async () => {
+  //   await signOut({ callbackUrl: "/" });
+  // };
 
   const getPasswordStrengthColor = () => {
     switch (passwordStrength) {
@@ -171,6 +176,33 @@ const ProfilePage = () => {
         return "Strong";
       default:
         return "";
+    }
+  };
+
+  const toggleCurrentPasswordVisibility = () => {
+    setShowCurrentPassword(!showCurrentPassword);
+  };
+
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const handleToggleKeyDown = (
+    e: React.KeyboardEvent,
+    field: "current" | "new" | "confirm"
+  ) => {
+    if (e.key === "Enter" || e.key === " ") {
+      if (field === "current") {
+        toggleCurrentPasswordVisibility();
+      } else if (field === "new") {
+        toggleNewPasswordVisibility();
+      } else {
+        toggleConfirmPasswordVisibility();
+      }
     }
   };
 
@@ -322,14 +354,32 @@ const ProfilePage = () => {
                 >
                   Current Password
                 </label>
-                <input
-                  type="password"
-                  id="currentPassword"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    id="currentPassword"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleCurrentPasswordVisibility}
+                    onKeyDown={(e) => handleToggleKeyDown(e, "current")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    aria-label={
+                      showCurrentPassword ? "Hide password" : "Show password"
+                    }
+                    tabIndex={0}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -339,15 +389,33 @@ const ProfilePage = () => {
                 >
                   New Password
                 </label>
-                <input
-                  type="password"
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 pr-10"
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleNewPasswordVisibility}
+                    onKeyDown={(e) => handleToggleKeyDown(e, "new")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    aria-label={
+                      showNewPassword ? "Hide password" : "Show password"
+                    }
+                    tabIndex={0}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 {newPassword && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
@@ -419,19 +487,37 @@ const ProfilePage = () => {
                 >
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`block w-full px-4 py-3 border ${
-                    confirmPassword && newPassword !== confirmPassword
-                      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                      : "border-gray-300 focus:ring-amber-500 focus:border-amber-500"
-                  } rounded-xl shadow-sm focus:outline-none focus:ring-2`}
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`block w-full px-4 py-3 border ${
+                      confirmPassword && newPassword !== confirmPassword
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 focus:ring-amber-500 focus:border-amber-500"
+                    } rounded-xl shadow-sm focus:outline-none focus:ring-2 pr-10`}
+                    minLength={8}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleConfirmPasswordVisibility}
+                    onKeyDown={(e) => handleToggleKeyDown(e, "confirm")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    aria-label={
+                      showConfirmPassword ? "Hide password" : "Show password"
+                    }
+                    tabIndex={0}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 {confirmPassword && newPassword !== confirmPassword && (
                   <p className="mt-1 text-sm text-red-500">
                     Passwords don&apos;t match
@@ -442,7 +528,7 @@ const ProfilePage = () => {
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button
                   type="submit"
-                  className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white disabled:opacity-50 transition-all"
+                  className="w-full inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white disabled:opacity-50 transition-all"
                   isLoading={loading}
                   disabled={
                     Boolean(loading) ||
@@ -454,6 +540,7 @@ const ProfilePage = () => {
                 </Button>
 
                 <Button
+                  className="w-full"
                   variant="outline"
                   type="button"
                   onClick={() => setIsChangingPassword(false)}
@@ -503,7 +590,7 @@ const ProfilePage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
                 <Button
                   onClick={() => setIsEditing(true)}
-                  className="inline-flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-md text-white transition-all"
+                  className="w-full inline-flex justify-center items-center py-3 px-6 mr-6 border border-transparent rounded-xl shadow-md text-white transition-all"
                 >
                   <Edit2 className="h-5 w-5 mr-2" />
                   Edit Profile
@@ -512,19 +599,10 @@ const ProfilePage = () => {
                 <Button
                   onClick={() => setIsChangingPassword(true)}
                   variant="outline"
-                  className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all"
+                  className="w-full inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all"
                 >
                   <Key className="h-5 w-5 mr-2" />
-                  Change Password
-                </Button>
-
-                <Button
-                  onClick={handleSignOut}
-                  variant="outline"
-                  className="inline-flex justify-center items-center py-3 px-6 border border-gray-300 rounded-xl shadow-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all sm:col-span-2"
-                >
-                  <LogOut className="h-5 w-5 mr-2" />
-                  Sign Out
+                  Edit Password
                 </Button>
               </div>
             </motion.div>

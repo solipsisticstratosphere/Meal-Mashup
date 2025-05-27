@@ -13,8 +13,8 @@ export const GET_INGREDIENTS = gql`
 `;
 
 export const GET_POPULAR_RECIPES = gql`
-  query GetPopularRecipes($limit: Int) {
-    popularRecipes(limit: $limit) {
+  query GetPopularRecipes($limit: Int, $offset: Int) {
+    popularRecipes(limit: $limit, offset: $offset) {
       id
       title
       image_url

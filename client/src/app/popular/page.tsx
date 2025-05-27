@@ -66,7 +66,8 @@ export default function PopularRecipesPage() {
         hasMore &&
         !loading &&
         !isLoadingMore &&
-        !allDataLoadedRef.current
+        !allDataLoadedRef.current &&
+        initialLoadAttempted
       ) {
         setIsLoadingMore(true);
 

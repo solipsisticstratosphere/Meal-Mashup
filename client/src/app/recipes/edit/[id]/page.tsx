@@ -7,7 +7,7 @@ import { GET_RECIPE, UPDATE_RECIPE, GET_INGREDIENTS } from "@/lib/graphql";
 import Button from "@/components/ui/Button";
 import { Recipe, RecipeIngredient, Ingredient } from "@/lib/types";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Trash } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 interface EditableRecipe {
@@ -130,12 +130,12 @@ export default function EditRecipePage() {
     setSearchTerm("");
   };
 
-  const handleRemoveIngredient = (id: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      ingredients: prev.ingredients.filter((item) => item.ingredientId !== id),
-    }));
-  };
+  // const handleRemoveIngredient = (id: string) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     ingredients: prev.ingredients.filter((item) => item.ingredientId !== id),
+  //   }));
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -364,7 +364,7 @@ export default function EditRecipePage() {
 
             <div className="bg-gray-50 p-4 rounded-xl">
               <h4 className="text-sm font-medium text-gray-700 mb-2">
-                Current Ingredients
+                Ingredients
               </h4>
               {formData.ingredients.length === 0 ? (
                 <p className="text-gray-500 italic">No ingredients added yet</p>
@@ -383,7 +383,7 @@ export default function EditRecipePage() {
                           ({item.quantity} {item.ingredient.unit_of_measure})
                         </span>
                       </div>
-                      <button
+                      {/* <button
                         type="button"
                         onClick={() =>
                           handleRemoveIngredient(item.ingredientId)
@@ -391,7 +391,7 @@ export default function EditRecipePage() {
                         className="text-red-500 hover:text-red-700 p-1"
                       >
                         <Trash className="w-4 h-4" />
-                      </button>
+                      </button> */}
                     </li>
                   ))}
                 </ul>

@@ -47,10 +47,8 @@ export default function Button({
     lg: "h-12 px-6 text-lg",
   };
 
-  // Enhanced mobile styles with better touch targets
   const mobileStyles = isMobile ? "min-h-[44px] min-w-[44px] py-2.5" : "";
 
-  // Adjust icon spacing based on size and device
   const iconSpacing = isMobile ? "mr-3" : "mr-2";
 
   const widthStyle = fullWidth ? "w-full" : "";

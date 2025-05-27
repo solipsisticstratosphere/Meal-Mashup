@@ -1,23 +1,14 @@
 import { Pool, PoolClient, PoolConfig } from "pg";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
-import {
-  Adapter,
-  AdapterUser,
-  AdapterSession,
-  AdapterAccount,
-} from "next-auth/adapters";
+import { Adapter, AdapterUser, AdapterSession } from "next-auth/adapters";
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({ path: "./.env" });
 }
 
 const dbConfig: PoolConfig = {
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  host: process.env.POSTGRES_HOST,
-  port: parseInt(process.env.POSTGRES_PORT || "5432"),
-  database: process.env.POSTGRES_DB,
+  connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
   ssl:
@@ -33,14 +24,17 @@ export function getPool(): Pool {
     if (isCloudflare) {
       console.log("Using Cloudflare-compatible PostgreSQL connection");
 
-      try {
-        const pgModule = require("pg-cloudflare");
-        if (typeof pgModule === "function") {
-          pgModule();
+      (async () => {
+        try {
+          const pgModule = await import("pg-cloudflare");
+          // @ts-expect-error: pg-cloudflare default export is a function
+          if (pgModule && typeof pgModule.default === "function") {
+            pgModule.default();
+          }
+        } catch (error) {
+          console.error("Error loading pg-cloudflare:", error);
         }
-      } catch (error) {
-        console.error("Error loading pg-cloudflare:", error);
-      }
+      })();
     } else {
       console.log("Using standard PostgreSQL connection");
     }

@@ -170,7 +170,7 @@ export default function Home() {
       </section>
 
       <motion.section
-        className="py-20 md:py-28"
+        className="py-16 md:py-20 lg:py-28"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
@@ -178,28 +178,31 @@ export default function Home() {
       >
         <div className="container mx-auto px-4">
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-12 md:mb-16"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-4xl font-bold mb-4 px-4">
               How It Works
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto px-4">
               Creating unexpected culinary masterpieces has never been easier
             </p>
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-8 max-w-6xl mx-auto"
             initial="hidden"
             whileInView="visible"
             variants={staggerChildren}
             viewport={{ once: true, margin: "-50px" }}
           >
-            <motion.div variants={cardVariants}>
+            <motion.div
+              variants={cardVariants}
+              className="md:max-w-2xl md:mx-auto lg:max-w-none"
+            >
               <FeatureCard
                 icon="Utensils"
                 title="Select Ingredients"
@@ -207,7 +210,10 @@ export default function Home() {
                 step={1}
               />
             </motion.div>
-            <motion.div variants={cardVariants}>
+            <motion.div
+              variants={cardVariants}
+              className="md:max-w-2xl md:mx-auto lg:max-w-none"
+            >
               <FeatureCard
                 icon="Sparkles"
                 title="Generate Recipe"
@@ -215,7 +221,10 @@ export default function Home() {
                 step={2}
               />
             </motion.div>
-            <motion.div variants={cardVariants}>
+            <motion.div
+              variants={cardVariants}
+              className="md:max-w-2xl md:mx-auto lg:max-w-none"
+            >
               <FeatureCard
                 icon="Trophy"
                 title="Share & Rate"

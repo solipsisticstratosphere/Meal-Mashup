@@ -365,4 +365,4 @@ User-contributed ingredients
 Recipe modification capabilities
 Kitchen inventory management
 
-1)Profile Update
+2)uuid

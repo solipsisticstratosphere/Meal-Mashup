@@ -26,6 +26,12 @@ import { hashPassword, verifyPassword } from "@/lib/auth-utils";
 
 export const runtime = "nodejs";
 
+// interface RecipeIngredientWithDetails extends Ingredient {
+//   quantity: number;
+//   unit: string;
+//   notes?: string | null;
+// }
+
 interface RecipeVote {
   id: string;
   userId: string;
@@ -159,7 +165,7 @@ const typeDefs = `
   type Query {
     ingredients(search: String, category: String): [Ingredient!]!
     ingredient(id: ID!): Ingredient
-    popularRecipes(limit: Int): [Recipe!]!
+    popularRecipes(limit: Int, offset: Int): [Recipe!]!
     recipe(id: ID!): Recipe
     myRecipes: [Recipe!]!
     recipeVotes(recipeId: ID!): RecipeVotes!
@@ -213,7 +219,10 @@ const resolvers = {
     ingredient: async (_: unknown, { id }: { id: string }) => {
       return await getIngredientById(id);
     },
-    popularRecipes: async (_: unknown, { limit = 6 }: { limit?: number }) => {
+    popularRecipes: async (
+      _: unknown,
+      { limit = 6, offset = 0 }: { limit?: number; offset?: number }
+    ) => {
       const recipes = await getAllRecipes();
 
       const sortedRecipes = recipes.sort((a, b) => {
@@ -222,7 +231,7 @@ const resolvers = {
         return b.rating - a.rating;
       });
 
-      return sortedRecipes.slice(0, limit);
+      return sortedRecipes.slice(offset, offset + limit);
     },
     recipe: async (_: unknown, { id }: { id: string }) => {
       return await getRecipeById(id);
@@ -308,9 +317,9 @@ const resolvers = {
         ingredient: {
           id: string;
           name: string;
-          image_url: string;
-          category?: string;
-          unit_of_measure?: string;
+          image_url: string | null; 
+          category?: string | null;
+          unit_of_measure?: string | null;
         };
         quantity: string;
         unit?: string;
@@ -323,21 +332,22 @@ const resolvers = {
 
       const recipeIngredients = await getIngredientsForRecipe(parent.id);
 
-      return recipeIngredients.map((ingredient) => ({
-        ingredientId: ingredient.id,
-        ingredient: {
-          id: ingredient.id,
-          name: ingredient.name,
-          image_url: `/ingredients/${ingredient.name
-            .toLowerCase()
-            .replace(/\s+/g, "-")}.jpg`,
-          category: ingredient.category,
-          unit_of_measure: ingredient.unit_of_measure || ingredient.unit || "",
-        },
-        quantity: ingredient.quantity.toString(),
-        unit: ingredient.unit,
-        notes: ingredient.notes,
-      }));
+      return recipeIngredients.map((ingredient) => {
+        return {
+          ingredientId: ingredient.id,
+          ingredient: {
+            id: ingredient.id,
+            name: ingredient.name,
+            image_url: ingredient.image_url,
+            category: ingredient.category,
+            unit_of_measure:
+              ingredient.unit_of_measure || ingredient.unit || "",
+          },
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          notes: ingredient.notes,
+        };
+      });
     },
     createdAt: (parent: { created_at?: Date }) => {
       return parent.created_at
@@ -589,9 +599,7 @@ const resolvers = {
                     ingredient: {
                       id: matchingIngredient.id,
                       name: matchingIngredient.name,
-                      image_url: `/ingredients/${matchingIngredient.name
-                        .toLowerCase()
-                        .replace(/\s+/g, "-")}.jpg`,
+                      image_url: matchingIngredient.image_url,
                       category: matchingIngredient.category,
                       unit_of_measure: unit,
                     },
@@ -680,14 +688,12 @@ const resolvers = {
             title: savedRecipe.title,
             description: savedRecipe.description,
             difficulty: savedRecipe.difficulty,
-            ingredients: validIngredients.map((ing) => ({
+            ingredients: validIngredients.map((ing: Ingredient) => ({
               ingredientId: ing.id,
               ingredient: {
                 id: ing.id,
                 name: ing.name,
-                image_url: `/ingredients/${ing.name
-                  .toLowerCase()
-                  .replace(/\s+/g, "-")}.jpg`,
+                image_url: ing.image_url,
                 category: ing.category,
               },
               quantity: "1",

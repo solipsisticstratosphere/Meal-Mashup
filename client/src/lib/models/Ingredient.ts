@@ -3,6 +3,7 @@ import { query, getById, insert, update, remove } from "../db.server";
 export interface Ingredient {
   id: string;
   name: string;
+  image_url: string | null;
   category: string | null;
   unit_of_measure: string | null;
   created_at: Date;
