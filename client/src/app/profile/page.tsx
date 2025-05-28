@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import Button from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const ProfilePage = () => {
   const { data: session, update: updateSession } = useSession();
@@ -250,7 +251,7 @@ const ProfilePage = () => {
                 <div className="relative group cursor-pointer">
                   {imageUrl ? (
                     <div className="relative h-32 w-32 rounded-full overflow-hidden border-4 border-amber-200 shadow-md">
-                      <img
+                      <Image
                         src={imageUrl || "/placeholder.svg"}
                         alt={name || "User"}
                         className="h-full w-full object-cover"
@@ -561,7 +562,7 @@ const ProfilePage = () => {
               <div className="mb-8 relative group">
                 {imageUrl ? (
                   <div className="relative h-40 w-40 rounded-full overflow-hidden border-4 border-amber-200 shadow-lg transition-transform duration-300 group-hover:scale-105">
-                    <img
+                    <Image
                       src={imageUrl || "/placeholder.svg"}
                       alt={name || "User"}
                       className="h-full w-full object-cover"

@@ -72,7 +72,7 @@ export default function EditRecipePage() {
         ingredients: (recipe.ingredients || []).map(
           (item: RecipeIngredient) => ({
             ingredientId: item.ingredient.id,
-            quantity: item.quantity,
+            quantity: String(item.quantity),
             ingredient: {
               id: item.ingredient.id,
               name: item.ingredient.name,

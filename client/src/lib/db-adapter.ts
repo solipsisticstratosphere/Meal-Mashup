@@ -24,17 +24,7 @@ export function getPool(): Pool {
     if (isCloudflare) {
       console.log("Using Cloudflare-compatible PostgreSQL connection");
 
-      (async () => {
-        try {
-          const pgModule = await import("pg-cloudflare");
-          // @ts-expect-error: pg-cloudflare default export is a function
-          if (pgModule && typeof pgModule.default === "function") {
-            pgModule.default();
-          }
-        } catch (error) {
-          console.error("Error loading pg-cloudflare:", error);
-        }
-      })();
+      (async () => {})();
     } else {
       console.log("Using standard PostgreSQL connection");
     }

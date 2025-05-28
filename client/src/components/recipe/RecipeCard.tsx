@@ -163,7 +163,7 @@ export default function RecipeCard({
   >(recipe.userVote || null);
   const [currentLikes, setCurrentLikes] = useState(recipe.likes || 0);
   const [currentDislikes, setCurrentDislikes] = useState(recipe.dislikes || 0);
-  const [totalVotes, setTotalVotes] = useState(recipe.votes || 0);
+
   const [isSaved, setIsSaved] = useState(recipe.isSaved || false);
 
   const { status } = useSession();
@@ -233,11 +233,12 @@ export default function RecipeCard({
 
   const backgroundGradient = gradients[gradientIndex];
 
+  const totalVotesToDisplay = currentLikes + currentDislikes;
+
   useEffect(() => {
     setCurrentLikes(recipe.likes || 0);
     setCurrentDislikes(recipe.dislikes || 0);
-    setTotalVotes(recipe.votes || 0);
-  }, [recipe.likes, recipe.dislikes, recipe.votes]);
+  }, [recipe.likes, recipe.dislikes]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -286,13 +287,17 @@ export default function RecipeCard({
       const voteToSend = currentUserVote === vote ? null : vote;
       const oldVote = currentUserVote;
 
-      if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
-      if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
-      if (voteToSend === "like") setCurrentLikes((prev) => prev + 1);
-      if (voteToSend === "dislike") setCurrentDislikes((prev) => prev + 1);
+      let newOptimisticLikes = currentLikes;
+      let newOptimisticDislikes = currentDislikes;
 
+      if (oldVote === "like") newOptimisticLikes--;
+      if (oldVote === "dislike") newOptimisticDislikes--;
+      if (voteToSend === "like") newOptimisticLikes++;
+      if (voteToSend === "dislike") newOptimisticDislikes++;
+
+      setCurrentLikes(newOptimisticLikes);
+      setCurrentDislikes(newOptimisticDislikes);
       setCurrentUserVote(voteToSend);
-      setTotalVotes(currentLikes - currentDislikes);
 
       storeVote(recipe.id, voteToSend as VoteType);
 
@@ -301,7 +306,7 @@ export default function RecipeCard({
       });
 
       if (data?.voteRecipe) {
-        if (data.voteRecipe.userVote !== voteToSend) {
+        if (data.voteRecipe.userVote !== undefined) {
           setCurrentUserVote(data.voteRecipe.userVote || null);
           storeVote(recipe.id, data.voteRecipe.userVote);
         }
@@ -314,11 +319,9 @@ export default function RecipeCard({
           setCurrentDislikes(data.voteRecipe.dislikes);
         }
 
-        if (data.voteRecipe.votes !== undefined) {
-          setTotalVotes(data.voteRecipe.votes);
-        }
-
         toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
+      } else {
+        toast.error("Failed to record your vote");
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
@@ -327,7 +330,7 @@ export default function RecipeCard({
       setCurrentUserVote(votedRecipes[recipe.id] || recipe.userVote || null);
       setCurrentLikes(recipe.likes || 0);
       setCurrentDislikes(recipe.dislikes || 0);
-      setTotalVotes(recipe.votes || 0);
+      storeVote(recipe.id, currentUserVote);
     }
   };
 
@@ -592,7 +595,7 @@ export default function RecipeCard({
 
           <span className="flex items-center text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
             <ThumbsUp className="w-4 h-4 mr-1.5" />
-            {totalVotes} votes ({currentLikes} likes, {currentDislikes}{" "}
+            {totalVotesToDisplay} votes ({currentLikes} likes, {currentDislikes}{" "}
             dislikes)
           </span>
         </div>

@@ -18,7 +18,7 @@ import {
 } from "@/lib/models/Recipe";
 import { generateRecipeFromIngredients } from "@/lib/huggingface";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/authOptions";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
@@ -221,7 +221,7 @@ const resolvers = {
     },
     popularRecipes: async (
       _: unknown,
-      { limit = 6, offset = 0 }: { limit?: number; offset?: number }
+      { limit = 12, offset = 0 }: { limit?: number; offset?: number }
     ) => {
       const recipes = await getAllRecipes();
 
@@ -317,7 +317,7 @@ const resolvers = {
         ingredient: {
           id: string;
           name: string;
-          image_url: string | null; 
+          image_url: string | null;
           category?: string | null;
           unit_of_measure?: string | null;
         };

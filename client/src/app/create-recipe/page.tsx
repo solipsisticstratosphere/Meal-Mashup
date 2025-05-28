@@ -15,6 +15,7 @@ import type { Ingredient, Recipe, DifficultyLevel } from "@/lib/types";
 import { generateRecipeFromIngredients } from "@/lib/huggingface";
 import { toast } from "react-hot-toast";
 import { motion, useAnimation } from "framer-motion";
+import Image from "next/image";
 
 export default function CreateRecipePage() {
   const {
@@ -598,10 +599,12 @@ const FlyingIngredient = ({
         style={{ width: `${width}px`, height: `${height}px` }}
       >
         <div className="relative h-28 w-full">
-          <img
+          <Image
             src={ingredient.image_url || "/placeholder-image.jpg"}
             alt={ingredient.name}
             className="absolute inset-0 w-full h-full object-cover"
+            width={width}
+            height={height}
           />
         </div>
         <div className="p-3">

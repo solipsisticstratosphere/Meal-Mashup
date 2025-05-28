@@ -13,7 +13,7 @@ import {
 } from "@/lib/models/Recipe";
 import { getIngredientsForRecipe } from "@/lib/models/Ingredient";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/authOptions";
 
 export const runtime = "nodejs";
 

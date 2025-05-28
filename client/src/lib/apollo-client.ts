@@ -9,9 +9,10 @@ const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || "/api/graphql",
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const popularRecipesMerge: FieldPolicy<any[], any[]> = {
   keyArgs: false,
-  merge(existing = [], incoming, { args }) {
+  merge(existing = [], incoming) {
     const merged = existing ? existing.slice(0) : [];
 
     if (incoming) {

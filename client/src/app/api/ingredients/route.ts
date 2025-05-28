@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const search = searchParams.get("search");
   const id = searchParams.get("id");
-  const category = searchParams.get("category");
+  // const category = searchParams.get("category");
 
   try {
     if (id) {
