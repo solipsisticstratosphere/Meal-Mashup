@@ -1,21 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { IngredientCategory } from "@/lib/types";
-import { useSpring, animated, type SpringValue } from "@react-spring/web";
-import { easings } from "@react-spring/web";
-
-interface WheelStyles {
-  rotate: SpringValue<number>;
-  scale: SpringValue<number>;
-}
 
 interface RouletteWheelProps {
   isSpinning: boolean;
   onComplete?: () => void;
 }
-
-const AnimatedSvg = animated("svg");
 
 export default function RouletteWheel({
   isSpinning,
@@ -46,40 +38,23 @@ export default function RouletteWheel({
     { start: "#E53E3E", end: "#FBB6CE", textColor: "#2D3748" }, // Pink - Oil
   ];
 
-  const styles: WheelStyles = useSpring({
-    rotate: targetRotation,
-    scale: isSpinning ? 1.05 : 1,
-    config: {
-      duration: isSpinning ? 35000 : 300,
-      easing: isSpinning ? easings.easeOutQuad : easings.easeOutBack,
-    },
-    onRest: () => {
-      if (isSpinningInternally) {
-        setIsSpinningInternally(false);
-        if (onComplete) {
-          onComplete();
-        }
-      }
-    },
-  });
-
   useEffect(() => {
     if (isSpinning && !isSpinningInternally) {
       setIsSpinningInternally(true);
 
       setTimeout(() => {
-        setTargetRotation((prev) => prev + 1440);
+        setTargetRotation((prev) => prev + 1440 + Math.random() * 360);
       }, 200);
+
+      // Simulate completion after animation
+      setTimeout(() => {
+        setIsSpinningInternally(false);
+        if (onComplete) {
+          onComplete();
+        }
+      }, 4000);
     }
-  }, [isSpinning, isSpinningInternally, setTargetRotation]);
-
-  const animatePulseGlow = {
-    animation: "pulse-glow 2s infinite ease-in-out",
-  };
-
-  const animateSparkle = (delay: number) => ({
-    animation: `sparkle 1.5s infinite ease-in-out ${delay}s`,
-  });
+  }, [isSpinning, isSpinningInternally, onComplete]);
 
   const triangleClipStyle = {
     clipPath: "polygon(50% 100%, 15% 0%, 85% 0%)",
@@ -92,28 +67,6 @@ export default function RouletteWheel({
   return (
     <div className="flex flex-col items-center">
       <style jsx>{`
-        @keyframes pulse-glow {
-          0%,
-          100% {
-            box-shadow: 0 0 20px 3px rgba(255, 215, 0, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 35px 8px rgba(255, 215, 0, 0.8);
-          }
-        }
-
-        @keyframes sparkle {
-          0%,
-          100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-
         .wheel-text {
           font-family: system-ui, -apple-system, sans-serif;
           font-weight: 700;
@@ -122,28 +75,62 @@ export default function RouletteWheel({
       `}</style>
 
       <div className="relative w-80 h-80">
-        <div
-          className="absolute inset-0 rounded-full transition-all duration-500 ease-out"
-          style={{
-            background: isSpinning
-              ? "radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%)"
-              : "radial-gradient(circle, rgba(0,0,0,0.05) 0%, transparent 70%)",
-            boxShadow: isSpinning
-              ? "0 0 40px 8px rgba(255, 215, 0, 0.6), 0 0 80px 15px rgba(255, 215, 0, 0.3)"
-              : "0 0 20px 3px rgba(0, 0, 0, 0.15)",
-            ...(isSpinning ? animatePulseGlow : {}),
+        {/* Animated glow background */}
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          initial={{
+            background:
+              "radial-gradient(circle, rgba(0,0,0,0.05) 0%, transparent 70%)",
+            boxShadow: "0 0 20px 3px rgba(0, 0, 0, 0.15)",
+          }}
+          animate={
+            isSpinning
+              ? {
+                  background: [
+                    "radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%)",
+                    "radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%)",
+                    "radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%)",
+                  ],
+                  boxShadow: [
+                    "0 0 20px 3px rgba(255, 215, 0, 0.4)",
+                    "0 0 35px 8px rgba(255, 215, 0, 0.8)",
+                    "0 0 20px 3px rgba(255, 215, 0, 0.4)",
+                  ],
+                }
+              : {
+                  background:
+                    "radial-gradient(circle, rgba(0,0,0,0.05) 0%, transparent 70%)",
+                  boxShadow: "0 0 20px 3px rgba(0, 0, 0, 0.15)",
+                }
+          }
+          transition={{
+            duration: isSpinning ? 2 : 0.5,
+            repeat: isSpinning ? Infinity : 0,
+            ease: "easeInOut",
           }}
         />
 
-        <AnimatedSvg
+        {/* Main wheel SVG */}
+        <motion.svg
           viewBox="0 0 200 200"
           className="w-full h-full"
           style={{
-            transform: styles.rotate.to(
-              (r: number) => `rotate(${r}deg) scale(${styles.scale.get()})`
-            ),
             transformOrigin: "center center",
             filter: "drop-shadow(0px 8px 15px rgba(0, 0, 0, 0.25))",
+          }}
+          animate={{
+            rotate: targetRotation,
+            scale: isSpinning ? 1.05 : 1,
+          }}
+          transition={{
+            rotate: {
+              duration: isSpinning ? 3.5 : 0.3,
+              ease: isSpinning ? "easeOut" : "easeInOut",
+            },
+            scale: {
+              duration: 0.3,
+              ease: "easeInOut",
+            },
           }}
         >
           <defs>
@@ -358,47 +345,94 @@ export default function RouletteWheel({
             <circle cx="100" cy="100" r="3" fill="#64748b" />
           </g>
 
-          {isSpinning && (
-            <>
-              {/* Dynamic sparkles */}
-              {[0, 60, 120, 180, 240, 300].map((angle, i) => {
-                const rad = (angle * Math.PI) / 180;
-                const x = 100 + 100 * Math.cos(rad);
-                const y = 100 + 100 * Math.sin(rad);
+          {/* Animated sparkles */}
+          <AnimatePresence>
+            {isSpinning && (
+              <>
+                {/* Dynamic sparkles */}
+                {[0, 60, 120, 180, 240, 300].map((angle, i) => {
+                  const rad = (angle * Math.PI) / 180;
+                  const x = 100 + 100 * Math.cos(rad);
+                  const y = 100 + 100 * Math.sin(rad);
 
-                return (
-                  <g key={`spark-${i}`} style={animateSparkle(i * 0.2)}>
-                    <circle cx={x} cy={y} r="3" fill="#FFD700" opacity="0.8" />
-                    <circle cx={x} cy={y} r="1.5" fill="#FFF" opacity="0.9" />
-                    <path
-                      d={`M ${x} ${y - 5} L ${x} ${y + 5} M ${x - 5} ${y} L ${
-                        x + 5
-                      } ${y}`}
-                      stroke="#FFD700"
-                      strokeWidth="1.5"
-                      opacity="0.7"
-                      strokeLinecap="round"
-                    />
-                  </g>
-                );
-              })}
+                  return (
+                    <motion.g
+                      key={`spark-${i}`}
+                      initial={{ opacity: 0.3, scale: 0.8 }}
+                      animate={{
+                        opacity: [0.3, 1, 0.3],
+                        scale: [0.8, 1.2, 0.8],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r="3"
+                        fill="#FFD700"
+                        opacity="0.8"
+                      />
+                      <circle cx={x} cy={y} r="1.5" fill="#FFF" opacity="0.9" />
+                      <path
+                        d={`M ${x} ${y - 5} L ${x} ${y + 5} M ${x - 5} ${y} L ${
+                          x + 5
+                        } ${y}`}
+                        stroke="#FFD700"
+                        strokeWidth="1.5"
+                        opacity="0.7"
+                        strokeLinecap="round"
+                      />
+                    </motion.g>
+                  );
+                })}
 
-              {/* Trailing light effect */}
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                fill="none"
-                stroke="rgba(255,215,0,0.3)"
-                strokeWidth="2"
-                strokeDasharray="10 5"
-                opacity="0.6"
-              />
-            </>
-          )}
-        </AnimatedSvg>
+                {/* Trailing light effect */}
+                <motion.circle
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill="none"
+                  stroke="rgba(255,215,0,0.3)"
+                  strokeWidth="2"
+                  strokeDasharray="10 5"
+                  initial={{ opacity: 0 }}
+                  animate={{
+                    opacity: [0, 0.6, 0],
+                    strokeDashoffset: [0, -50, -100],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                />
+              </>
+            )}
+          </AnimatePresence>
+        </motion.svg>
 
-        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
+        {/* Animated pointer */}
+        <motion.div
+          className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10"
+          animate={
+            isSpinning
+              ? {
+                  y: [0, -2, 0],
+                  rotate: [0, 5, -5, 0],
+                }
+              : { y: 0, rotate: 0 }
+          }
+          transition={{
+            duration: 0.3,
+            repeat: isSpinning ? Infinity : 0,
+            ease: "easeInOut",
+          }}
+        >
           <div className="w-6 h-10 relative">
             {/* Pointer shadow */}
             <div
@@ -417,11 +451,8 @@ export default function RouletteWheel({
               className="absolute w-3 h-5 bg-gradient-to-b from-red-200 to-red-400 transform translate-x-1 translate-y-1 opacity-70"
               style={triangleHighlightStyle}
             />
-
-            {/* Pointer base */}
-            {/* <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3 h-2 bg-gradient-to-b from-gray-300 to-gray-600 rounded-b-sm" /> */}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
