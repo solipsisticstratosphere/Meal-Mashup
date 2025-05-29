@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { IngredientCategory } from "@/lib/types";
 
 interface RouletteWheelProps {
   isSpinning: boolean;
@@ -16,26 +15,26 @@ export default function RouletteWheel({
   const [targetRotation, setTargetRotation] = useState(0);
   const [isSpinningInternally, setIsSpinningInternally] = useState(false);
 
-  const categories: IngredientCategory[] = [
-    "Protein",
-    "Vegetables",
-    "Fruit",
-    "Grains",
-    "Dairy",
-    "Spices",
-    "Herbs",
-    "Oil",
+  const categories = [
+    "Белки",
+    "Овощи",
+    "Фрукты",
+    "Злаки",
+    "Молочные",
+    "Специи",
+    "Травы",
+    "Масла",
   ];
 
   const segmentGradients = [
-    { start: "#E53E3E", end: "#FC8181", textColor: "#FFFFFF" }, // Red - Protein
-    { start: "#38A169", end: "#68D391", textColor: "#FFFFFF" }, // Green - Vegetables
-    { start: "#D69E2E", end: "#F6E05E", textColor: "#2D3748" }, // Yellow - Fruit
-    { start: "#3182CE", end: "#63B3ED", textColor: "#FFFFFF" }, // Blue - Grains
-    { start: "#805AD5", end: "#B794F6", textColor: "#FFFFFF" }, // Purple - Dairy
-    { start: "#DD6B20", end: "#F6AD55", textColor: "#FFFFFF" }, // Orange - Spices
-    { start: "#319795", end: "#4FD1C7", textColor: "#FFFFFF" }, // Teal - Herbs
-    { start: "#E53E3E", end: "#FBB6CE", textColor: "#2D3748" }, // Pink - Oil
+    { start: "#E53E3E", end: "#FC8181", textColor: "#FFFFFF" }, // Red - Белки
+    { start: "#38A169", end: "#68D391", textColor: "#FFFFFF" }, // Green - Овощи
+    { start: "#D69E2E", end: "#F6E05E", textColor: "#FFFFFF" }, // Yellow - Фрукты
+    { start: "#3182CE", end: "#63B3ED", textColor: "#FFFFFF" }, // Blue - Злаки
+    { start: "#805AD5", end: "#B794F6", textColor: "#FFFFFF" }, // Purple - Молочные
+    { start: "#DD6B20", end: "#F6AD55", textColor: "#FFFFFF" }, // Orange - Специи
+    { start: "#319795", end: "#4FD1C7", textColor: "#FFFFFF" }, // Teal - Травы
+    { start: "#E53E3E", end: "#FBB6CE", textColor: "#FFFFFF" }, // Pink - Масла
   ];
 
   useEffect(() => {
@@ -43,16 +42,15 @@ export default function RouletteWheel({
       setIsSpinningInternally(true);
 
       setTimeout(() => {
-        setTargetRotation((prev) => prev + 1440 + Math.random() * 360);
+        setTargetRotation((prev) => prev + 1800 + Math.random() * 540);
       }, 200);
 
-      // Simulate completion after animation
       setTimeout(() => {
         setIsSpinningInternally(false);
         if (onComplete) {
           onComplete();
         }
-      }, 4000);
+      }, 8500);
     }
   }, [isSpinning, isSpinningInternally, onComplete]);
 
@@ -66,14 +64,6 @@ export default function RouletteWheel({
 
   return (
     <div className="flex flex-col items-center">
-      <style jsx>{`
-        .wheel-text {
-          font-family: system-ui, -apple-system, sans-serif;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-        }
-      `}</style>
-
       <div className="relative w-80 h-80">
         {/* Animated glow background */}
         <motion.div
@@ -88,13 +78,13 @@ export default function RouletteWheel({
               ? {
                   background: [
                     "radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%)",
-                    "radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%)",
+                    "radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)",
                     "radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%)",
                   ],
                   boxShadow: [
-                    "0 0 20px 3px rgba(255, 215, 0, 0.4)",
-                    "0 0 35px 8px rgba(255, 215, 0, 0.8)",
-                    "0 0 20px 3px rgba(255, 215, 0, 0.4)",
+                    "0 0 30px 5px rgba(255, 215, 0, 0.5)",
+                    "0 0 50px 12px rgba(255, 215, 0, 0.9)",
+                    "0 0 30px 5px rgba(255, 215, 0, 0.5)",
                   ],
                 }
               : {
@@ -105,7 +95,7 @@ export default function RouletteWheel({
           }
           transition={{
             duration: isSpinning ? 2 : 0.5,
-            repeat: isSpinning ? Infinity : 0,
+            repeat: isSpinning ? Number.POSITIVE_INFINITY : 0,
             ease: "easeInOut",
           }}
         />
@@ -124,8 +114,9 @@ export default function RouletteWheel({
           }}
           transition={{
             rotate: {
-              duration: isSpinning ? 3.5 : 0.3,
-              ease: isSpinning ? "easeOut" : "easeInOut",
+              duration: isSpinning ? 8 : 0.3,
+
+              ease: isSpinning ? [0.15, 0.35, 0.35, 0.85] : "easeInOut",
             },
             scale: {
               duration: 0.3,
@@ -168,11 +159,11 @@ export default function RouletteWheel({
               height="200%"
             >
               <feDropShadow
-                dx="0"
+                dx="1"
                 dy="1"
                 stdDeviation="1"
                 floodColor="#000000"
-                floodOpacity="0.5"
+                floodOpacity="0.7"
               />
             </filter>
 
@@ -231,7 +222,7 @@ export default function RouletteWheel({
 
             const textAngle = startAngle + angleIncrement / 2;
             const textRad = ((textAngle - 90) * Math.PI) / 180;
-            const textDistance = 60;
+            const textDistance = 55;
             const textX = 100 + textDistance * Math.cos(textRad);
             const textY = 100 + textDistance * Math.sin(textRad);
             const textRotation =
@@ -263,40 +254,16 @@ export default function RouletteWheel({
                 <text
                   x={textX}
                   y={textY}
-                  fontSize="9"
-                  fontWeight="700"
+                  fontSize="10"
+                  fontWeight="600"
                   fill={segmentGradients[i].textColor}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="wheel-text"
-                  filter="url(#text-shadow)"
                   style={{
                     transform: `rotate(${textRotation}deg)`,
                     transformOrigin: `${textX}px ${textY}px`,
-                  }}
-                >
-                  {category}
-                </text>
-
-                <text
-                  x={textX}
-                  y={textY}
-                  fontSize="11"
-                  fontWeight="700"
-                  fill="none"
-                  stroke={
-                    segmentGradients[i].textColor === "#FFFFFF"
-                      ? "#000000"
-                      : "#FFFFFF"
-                  }
-                  strokeWidth="0.5"
-                  strokeOpacity="0.3"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="wheel-text"
-                  style={{
-                    transform: `rotate(${textRotation}deg)`,
-                    transformOrigin: `${textX}px ${textY}px`,
+                    textShadow: "1px 1px 2px rgba(0,0,0,0.7)",
+                    fontFamily: "Arial, sans-serif",
                   }}
                 >
                   {category}
@@ -345,7 +312,7 @@ export default function RouletteWheel({
             <circle cx="100" cy="100" r="3" fill="#64748b" />
           </g>
 
-          {/* Animated sparkles */}
+          {/* Animated sparkles - теперь работают дольше */}
           <AnimatePresence>
             {isSpinning && (
               <>
@@ -361,53 +328,53 @@ export default function RouletteWheel({
                       initial={{ opacity: 0.3, scale: 0.8 }}
                       animate={{
                         opacity: [0.3, 1, 0.3],
-                        scale: [0.8, 1.2, 0.8],
+                        scale: [0.8, 1.4, 0.8],
                       }}
                       transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        delay: i * 0.2,
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay: i * 0.3,
                         ease: "easeInOut",
                       }}
                     >
                       <circle
                         cx={x}
                         cy={y}
-                        r="3"
+                        r="4"
                         fill="#FFD700"
-                        opacity="0.8"
+                        opacity="0.9"
                       />
-                      <circle cx={x} cy={y} r="1.5" fill="#FFF" opacity="0.9" />
+                      <circle cx={x} cy={y} r="2" fill="#FFF" opacity="1" />
                       <path
-                        d={`M ${x} ${y - 5} L ${x} ${y + 5} M ${x - 5} ${y} L ${
-                          x + 5
+                        d={`M ${x} ${y - 6} L ${x} ${y + 6} M ${x - 6} ${y} L ${
+                          x + 6
                         } ${y}`}
                         stroke="#FFD700"
-                        strokeWidth="1.5"
-                        opacity="0.7"
+                        strokeWidth="2"
+                        opacity="0.8"
                         strokeLinecap="round"
                       />
                     </motion.g>
                   );
                 })}
 
-                {/* Trailing light effect */}
+                {/* Trailing light effect - дольше и ярче */}
                 <motion.circle
                   cx="100"
                   cy="100"
                   r="90"
                   fill="none"
-                  stroke="rgba(255,215,0,0.3)"
-                  strokeWidth="2"
-                  strokeDasharray="10 5"
+                  stroke="rgba(255,215,0,0.5)"
+                  strokeWidth="3"
+                  strokeDasharray="15 8"
                   initial={{ opacity: 0 }}
                   animate={{
-                    opacity: [0, 0.6, 0],
-                    strokeDashoffset: [0, -50, -100],
+                    opacity: [0, 0.8, 0],
+                    strokeDashoffset: [0, -60, -120],
                   }}
                   transition={{
-                    duration: 2,
-                    repeat: Infinity,
+                    duration: 3,
+                    repeat: Number.POSITIVE_INFINITY,
                     ease: "linear",
                   }}
                 />
@@ -418,41 +385,255 @@ export default function RouletteWheel({
 
         {/* Animated pointer */}
         <motion.div
-          className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10"
+          className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10"
           animate={
             isSpinning
               ? {
-                  y: [0, -2, 0],
-                  rotate: [0, 5, -5, 0],
+                  y: [0, -4, 0],
+                  rotate: [0, 8, -8, 0],
+                  scale: [1, 1.1, 1],
                 }
-              : { y: 0, rotate: 0 }
+              : { y: 0, rotate: 0, scale: 1 }
           }
           transition={{
-            duration: 0.3,
-            repeat: isSpinning ? Infinity : 0,
+            duration: 0.4,
+            repeat: isSpinning ? Number.POSITIVE_INFINITY : 0,
             ease: "easeInOut",
           }}
         >
-          <div className="w-6 h-10 relative">
+          <div className="w-7 h-12 relative">
             {/* Pointer shadow */}
             <div
-              className="absolute w-5 h-8 bg-gray-800 transform translate-x-1 translate-y-1 opacity-20"
+              className="absolute w-6 h-10 bg-gray-900 transform translate-x-1 translate-y-1 opacity-30"
               style={triangleClipStyle}
             />
 
             {/* Main pointer body */}
             <div
-              className="absolute w-5 h-8 bg-gradient-to-b from-red-400 via-red-600 to-red-800"
+              className="absolute w-6 h-10 bg-gradient-to-b from-red-300 via-red-500 to-red-700"
               style={triangleClipStyle}
             />
 
             {/* Pointer highlight */}
             <div
-              className="absolute w-3 h-5 bg-gradient-to-b from-red-200 to-red-400 transform translate-x-1 translate-y-1 opacity-70"
+              className="absolute w-4 h-6 bg-gradient-to-b from-red-100 to-red-300 transform translate-x-1 translate-y-1 opacity-80"
               style={triangleHighlightStyle}
+            />
+
+            {/* Extra glow effect */}
+            <div
+              className="absolute w-6 h-10 bg-gradient-to-b from-yellow-200 to-transparent opacity-40"
+              style={triangleClipStyle}
             />
           </div>
         </motion.div>
+
+        {isSpinning && (
+          <motion.div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: [0, 0.6, 0],
+              scale: [0.95, 1.05, 0.95],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+            style={{
+              background:
+                "radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%)",
+              boxShadow: "0 0 40px 10px rgba(255, 215, 0, 0.3)",
+            }}
+          />
+        )}
+
+        <AnimatePresence>
+          {isSpinning && (
+            <>
+              {Array.from({ length: 16 }).map((_, i) => {
+                const angle = i * 22.5 + (Math.random() * 15 - 7.5);
+                const distance = 160 + Math.random() * 80;
+                const x = Math.cos((angle * Math.PI) / 180) * distance;
+                const y = Math.sin((angle * Math.PI) / 180) * distance;
+                const size = 0.6 + Math.random() * 0.8;
+
+                return (
+                  <motion.div
+                    key={`star-${i}`}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+                      fontSize: `${size}rem`,
+                    }}
+                    initial={{
+                      opacity: 0,
+                      scale: 0,
+                      rotate: 0,
+                    }}
+                    animate={{
+                      opacity: [0, 0.3, 0.6, 0.3, 0],
+                      scale: [0, 0.8, 1, 0.8, 0],
+                      rotate: [0, 90, 180, 270, 360],
+                      x: [x, x + (Math.random() * 30 - 15), x],
+                      y: [y, y + (Math.random() * 30 - 15), y],
+                    }}
+                    transition={{
+                      duration: 4 + Math.random() * 3,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: i * 0.15 + Math.random() * 0.5,
+                      ease: [0.25, 0.46, 0.45, 0.94],
+                    }}
+                  >
+                    <div className="text-yellow-200 opacity-40">⭐</div>
+                  </motion.div>
+                );
+              })}
+
+              {Array.from({ length: 12 }).map((_, i) => {
+                const angle = i * 30 + (Math.random() * 20 - 10);
+                const distance = 180 + Math.random() * 70;
+                const x = Math.cos((angle * Math.PI) / 180) * distance;
+                const y = Math.sin((angle * Math.PI) / 180) * distance;
+
+                return (
+                  <motion.div
+                    key={`light-${i}`}
+                    className="absolute pointer-events-none w-1 h-1 bg-yellow-100 rounded-full"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+                      boxShadow: "0 0 4px rgba(255, 255, 200, 0.6)",
+                    }}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{
+                      opacity: [0, 0.4, 0.8, 0.4, 0],
+                      scale: [0, 1, 1.5, 1, 0],
+                    }}
+                    transition={{
+                      duration: 3 + Math.random() * 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: i * 0.25 + Math.random() * 1,
+                      ease: "easeInOut",
+                    }}
+                  />
+                );
+              })}
+
+              {Array.from({ length: 8 }).map((_, i) => {
+                const angle = i * 45 + (Math.random() * 30 - 15);
+                const distance = 200 + Math.random() * 50;
+                const x = Math.cos((angle * Math.PI) / 180) * distance;
+                const y = Math.sin((angle * Math.PI) / 180) * distance;
+
+                return (
+                  <motion.div
+                    key={`sparkle-${i}`}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+                    }}
+                    initial={{ opacity: 0, scale: 0, rotate: 0 }}
+                    animate={{
+                      opacity: [0, 0.2, 0.5, 0.2, 0],
+                      scale: [0, 0.5, 1, 0.5, 0],
+                      rotate: [0, 180, 360],
+                    }}
+                    transition={{
+                      duration: 2.5 + Math.random() * 1.5,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: i * 0.3 + Math.random() * 0.8,
+                      ease: [0.4, 0, 0.6, 1],
+                    }}
+                  >
+                    <div className="w-1 h-1 bg-yellow-200 rounded-full opacity-60" />
+                    <div
+                      className="absolute top-0 left-0 w-1 h-1 bg-white rounded-full opacity-80"
+                      style={{ transform: "scale(0.5)" }}
+                    />
+                  </motion.div>
+                );
+              })}
+
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                {[1, 2].map((ring, i) => (
+                  <motion.div
+                    key={`wave-${i}`}
+                    className="absolute border border-yellow-200 rounded-full opacity-10"
+                    style={{
+                      width: `${320 + ring * 40}px`,
+                      height: `${320 + ring * 40}px`,
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      borderWidth: "1px",
+                    }}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{
+                      opacity: [0, 0.15, 0],
+                      scale: [0.9, 1.1, 0.9],
+                    }}
+                    transition={{
+                      duration: 5 + i,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: i * 1.5,
+                      ease: "easeInOut",
+                    }}
+                  />
+                ))}
+              </motion.div>
+
+              {Array.from({ length: 6 }).map((_, i) => {
+                const randomDelay = Math.random() * 3;
+                const randomAngle = Math.random() * 360;
+                const randomDistance = 140 + Math.random() * 100;
+                const x =
+                  Math.cos((randomAngle * Math.PI) / 180) * randomDistance;
+                const y =
+                  Math.sin((randomAngle * Math.PI) / 180) * randomDistance;
+
+                return (
+                  <motion.div
+                    key={`twinkle-${i}`}
+                    className="absolute pointer-events-none text-yellow-100 text-xs opacity-30"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+                    }}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{
+                      opacity: [0, 0.3, 0],
+                      scale: [0, 1, 0],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Number.POSITIVE_INFINITY,
+                      delay: randomDelay,
+                      repeatDelay: 2 + Math.random() * 3,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    ✦
+                  </motion.div>
+                );
+              })}
+            </>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
