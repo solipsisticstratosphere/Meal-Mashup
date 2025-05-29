@@ -1027,8 +1027,8 @@ const resolvers = {
         await prisma.$executeRaw`
           INSERT INTO password_reset_tokens (id, token, user_id, expires_at, created_at, is_used)
           VALUES (${crypto.randomUUID()}, ${token}, ${
-          user.id
-        }, ${expiresAt}, NOW(), false)
+            user.id
+          }, ${expiresAt}, NOW(), false)
         `;
 
         const emailResult = await sendPasswordResetEmail(email, token);
@@ -1042,10 +1042,6 @@ const resolvers = {
             success: false,
             message: "Failed to send reset email. Please try again later.",
           };
-        }
-
-        if (emailResult.messageUrl) {
-          console.log("Email preview URL:", emailResult.messageUrl);
         }
 
         return {
