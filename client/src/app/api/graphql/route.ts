@@ -39,7 +39,6 @@ interface RecipeVote {
   createdAt: Date;
 }
 
-// Helper-функция для получения данных о голосах для списка ID рецептов
 async function getVotesForRecipeIds(recipeIds: string[]) {
   if (!recipeIds.length) return { likesMap: new Map(), dislikesMap: new Map() };
 
@@ -457,7 +456,7 @@ const resolvers = {
 
       return 0;
     },
-    rating: (parent: { rating?: number }) => parent.rating ?? 0, // Предполагаем, что rating обновляется в voteRecipe
+    rating: (parent: { rating?: number }) => parent.rating ?? 0,
 
     cookingMethod: (parent: { instructions?: string }) => {
       return parent.instructions || "";
@@ -468,11 +467,8 @@ const resolvers = {
     },
 
     likes: async (parent: { id: string; __likesCount?: number }) => {
-      // Если предзагружено (из popularRecipes)
       if (parent.__likesCount !== undefined) return parent.__likesCount;
 
-      // Иначе, считаем для одного рецепта (для страницы деталей recipe(id: ID!))
-      // Это нормально для запроса одного рецепта, но не для списков.
       return prisma.recipeVote.count({
         where: { recipeId: parent.id, voteType: "like" },
       });
@@ -486,7 +482,7 @@ const resolvers = {
     },
 
     userVote: async (parent: { id: string; userVote?: string | null }) => {
-      if (parent.userVote !== undefined) return parent.userVote; // Если предзагружено
+      if (parent.userVote !== undefined) return parent.userVote;
 
       const user = await getUserFromSession();
       if (!user || !user.id) return null;
@@ -498,8 +494,7 @@ const resolvers = {
     },
 
     isSaved: async (parent: { id: string; isSaved?: boolean }) => {
-      if (parent.isSaved !== undefined) return parent.isSaved; // Если предзагружено
-
+      if (parent.isSaved !== undefined) return parent.isSaved;
       const user = await getUserFromSession();
       if (!user || !user.id) return false;
       const saved = await prisma.userSavedRecipe.findUnique({
@@ -572,7 +567,7 @@ const resolvers = {
             ),
             servings: 4,
             tags: ingredientNames.slice(0, 3),
-            rating: null,
+            rating: 3.0,
             featured: false,
             user_id: userId ?? null,
           };

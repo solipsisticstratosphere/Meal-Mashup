@@ -107,6 +107,7 @@ export const GENERATE_RECIPE = gql`
     generateRecipe(ingredients: $ingredients) {
       id
       title
+      # ... все остальные поля из вашего RecipeCard ...
       ingredients {
         ingredient {
           id
@@ -124,6 +125,10 @@ export const GENERATE_RECIPE = gql`
       likes
       dislikes
       createdAt
+      tags
+      userVote
+      isSaved
+      rating
     }
   }
 `;

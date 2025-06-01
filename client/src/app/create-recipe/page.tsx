@@ -68,9 +68,8 @@ export default function CreateRecipePage() {
     try {
       const ingredientNames = selectedIngredients.map((ing) => ing.name);
 
-      const generatedRecipeData = await generateRecipeFromIngredients(
-        ingredientNames
-      );
+      const generatedRecipeData =
+        await generateRecipeFromIngredients(ingredientNames);
 
       const recipe: Recipe = {
         id: generateUuid(),
@@ -118,6 +117,13 @@ export default function CreateRecipePage() {
       difficulty: "Medium" as DifficultyLevel,
       createdAt: new Date().toISOString(),
       votes: 0,
+      likes: 0,
+      dislikes: 0,
+      rating: 0,
+      userVote: null,
+      isSaved: false,
+      image_url: undefined,
+      tags: [],
     };
 
     return mockRecipe;
@@ -263,8 +269,20 @@ export default function CreateRecipePage() {
         }
       };
 
-      const showFinalRecipe = (recipe: Recipe) => {
-        setCurrentRecipe(recipe);
+      const showFinalRecipe = (recipeData: Recipe) => {
+        const completeRecipe: Recipe = {
+          ...recipeData,
+          id: recipeData.id || generateUuid(),
+          votes: recipeData.votes ?? 0,
+          likes: recipeData.likes ?? 0,
+          dislikes: recipeData.dislikes ?? 0,
+          rating: recipeData.rating ?? 3,
+          userVote: recipeData.userVote ?? null,
+          isSaved: recipeData.isSaved ?? false,
+          image_url: recipeData.image_url || undefined,
+          tags: recipeData.tags || [],
+        };
+        setCurrentRecipe(completeRecipe);
         setShowGenerationAnimation(false);
         setIsGenerating(false);
         setAnimatingIngredients([]);
@@ -409,8 +427,8 @@ export default function CreateRecipePage() {
                     {selectedIngredients.length === 0
                       ? "Select ingredients first"
                       : isGenerating
-                      ? "Generating..."
-                      : "Generate Random Recipe"}
+                        ? "Generating..."
+                        : "Generate Random Recipe"}
                   </Button>
                 </div>
               </div>

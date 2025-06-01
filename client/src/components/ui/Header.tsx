@@ -95,7 +95,7 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
-      <div className="container mx-auto px-4 lg:px-6 flex justify-between items-center h-16 lg:h-18">
+      <div className="container mx-auto px-4 lg:px-6 flex justify-between items-center h-16 lg:h-18 gap-4">
         <Link
           href="/"
           className="flex items-center gap-2.5 group"

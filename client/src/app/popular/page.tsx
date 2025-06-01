@@ -3,9 +3,8 @@
 import { useQuery } from "@apollo/client";
 import { GET_POPULAR_RECIPES } from "@/lib/graphql";
 import Link from "next/link";
-import Button from "@/components/ui/Button";
 import type { Recipe } from "@/lib/types";
-import { ChefHat, PlusCircle, RotateCcw } from "lucide-react";
+import { ChefHat, PlusCircle, RotateCcw, ArrowDown } from "lucide-react";
 import { FoodCard } from "@/components/main/food-card";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -130,10 +129,116 @@ export default function PopularRecipesPage() {
           </p>
         </div>
         <Link href="/create-recipe">
-          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-5 py-2.5 md:px-6 md:py-3 rounded-xl shadow-md transition-all hover:brightness-110 hover:scale-105">
-            <PlusCircle className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-            Create Your Own
-          </Button>
+          <motion.button
+            className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold 
+w-full sm:w-full md:w-auto
+    px-4 py-2.5 text-sm
+    sm:px-5 sm:py-3 sm:text-sm
+    md:px-6 md:py-3 md:text-base
+    lg:px-8 lg:py-4 lg:text-base
+    rounded-xl sm:rounded-xl md:rounded-2xl
+    shadow-md hover:shadow-lg sm:shadow-lg sm:hover:shadow-xl
+    transition-all duration-300 ease-out 
+    focus:outline-none focus:ring-2 focus:ring-amber-200 focus:ring-opacity-50
+    active:scale-95 touch-manipulation"
+            whileHover={{
+              scale: 1.02,
+              y: -1,
+            }}
+            whileTap={{
+              scale: 0.98,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 17,
+            }}
+            aria-label="Create your own recipe"
+          >
+            {/* Background shimmer effect - reduced on mobile */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 sm:via-white/20 to-transparent"
+              initial={{ x: "-100%" }}
+              whileHover={{ x: "100%" }}
+              transition={{
+                duration: 0.8,
+                ease: "easeInOut",
+              }}
+            />
+
+            {/* Floating particles effect - hidden on mobile for performance */}
+            <div className="absolute inset-0 overflow-hidden rounded-xl md:rounded-2xl hidden sm:block">
+              {[...Array(2)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-0.5 h-0.5 sm:w-1 sm:h-1 bg-white/40 rounded-full"
+                  initial={{
+                    x: Math.random() * 100 + "%",
+                    y: "100%",
+                    opacity: 0,
+                  }}
+                  animate={{
+                    y: "-20%",
+                    opacity: [0, 1, 0],
+                  }}
+                  transition={{
+                    duration: 2 + i * 0.5,
+                    repeat: Number.POSITIVE_INFINITY,
+                    delay: i * 0.7,
+                    ease: "easeOut",
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Button content */}
+            <div className="relative flex items-center gap-1.5 sm:gap-2 md:gap-3">
+              <motion.div
+                className="group-hover:rotate-90 transition-transform duration-300"
+                whileHover={{ rotate: 90 }}
+              >
+                <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+              </motion.div>
+
+              <span className="font-medium whitespace-nowrap">
+                <span className="sm:hidden">Create</span>
+                <span className="hidden sm:inline">Create Your Own</span>
+              </span>
+
+              {/* Animated badge - hidden on small screens */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 500 }}
+                className="hidden md:flex bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs font-medium border border-white/30"
+              >
+                <motion.span
+                  animate={{
+                    color: ["#ffffff", "#fef3c7", "#ffffff"],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "easeInOut",
+                  }}
+                >
+                  New
+                </motion.span>
+              </motion.div>
+            </div>
+
+            {/* Ripple effect on click */}
+            <motion.div
+              className="absolute inset-0 bg-white/30 rounded-xl md:rounded-2xl"
+              initial={{ scale: 0, opacity: 1 }}
+              animate={{ scale: 0, opacity: 1 }}
+              whileTap={{ scale: 1.5, opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            />
+
+            {/* Glow effect - reduced on mobile */}
+            <div className="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-r from-amber-400/10 sm:from-amber-400/20 to-orange-500/10 sm:to-orange-500/20 blur-lg sm:blur-xl group-hover:blur-xl sm:group-hover:blur-2xl transition-all duration-300 -z-10" />
+          </motion.button>
         </Link>
       </motion.div>
 
@@ -164,9 +269,80 @@ export default function PopularRecipesPage() {
             create one!
           </p>
           <Link href="/create-recipe">
-            <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 md:px-8 py-2.5 md:py-3 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105">
-              Create a Recipe
-            </Button>
+            <motion.button
+              className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold 
+w-full sm:w-full md:w-auto
+    px-5 py-3 text-sm
+    sm:px-6 sm:py-3 sm:text-base
+    md:px-8 md:py-4 md:text-base
+    rounded-xl sm:rounded-xl md:rounded-2xl
+    shadow-md hover:shadow-lg sm:shadow-lg sm:hover:shadow-xl
+    transition-all duration-300 ease-out 
+    focus:outline-none focus:ring-2 focus:ring-amber-200 focus:ring-opacity-50
+    active:scale-95 touch-manipulation"
+              whileHover={{
+                scale: 1.02,
+                y: -1,
+              }}
+              whileTap={{
+                scale: 0.98,
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 17,
+              }}
+              aria-label="Create your first recipe"
+            >
+              {/* Background shimmer effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 sm:via-white/20 to-transparent"
+                initial={{ x: "-100%" }}
+                whileHover={{ x: "100%" }}
+                transition={{
+                  duration: 0.8,
+                  ease: "easeInOut",
+                }}
+              />
+
+              {/* Button content */}
+              <div className="relative flex items-center justify-center gap-2 sm:gap-3">
+                <motion.div
+                  className="group-hover:rotate-90 transition-transform duration-300"
+                  whileHover={{ rotate: 90 }}
+                >
+                  <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                </motion.div>
+
+                <span className="font-medium">Create a Recipe</span>
+
+                {/* Pulsing dot indicator - smaller on mobile */}
+                <motion.div
+                  className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [1, 0.7, 1],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "easeInOut",
+                  }}
+                />
+              </div>
+
+              {/* Ripple effect on click */}
+              <motion.div
+                className="absolute inset-0 bg-white/30 rounded-xl md:rounded-2xl"
+                initial={{ scale: 0, opacity: 1 }}
+                animate={{ scale: 0, opacity: 1 }}
+                whileTap={{ scale: 1.5, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+              />
+
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-xl md:rounded-2xl bg-gradient-to-r from-amber-400/10 sm:from-amber-400/20 to-orange-500/10 sm:to-orange-500/20 blur-lg sm:blur-xl group-hover:blur-xl sm:group-hover:blur-2xl transition-all duration-300 -z-10" />
+            </motion.button>
           </Link>
         </motion.div>
       )}
@@ -238,23 +414,120 @@ export default function PopularRecipesPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <Button
+              <motion.button
                 onClick={loadMoreRecipes}
                 disabled={isLoadingMore}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+                className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold 
+  px-6 py-3 text-sm
+  sm:px-7 sm:py-3.5 sm:text-base
+  md:px-8 md:py-4 md:text-base
+  rounded-xl sm:rounded-xl md:rounded-2xl
+  shadow-md hover:shadow-lg sm:shadow-lg sm:hover:shadow-xl
+  transition-all duration-300 ease-out 
+  disabled:cursor-not-allowed 
+  focus:outline-none focus:ring-2 focus:ring-amber-200 focus:ring-opacity-50
+  active:scale-95 touch-manipulation
+  min-w-[140px] sm:min-w-[160px] md:min-w-[200px]"
+                whileHover={{
+                  scale: isLoadingMore ? 1 : 1.02,
+                  y: isLoadingMore ? 0 : -1,
+                }}
+                whileTap={{
+                  scale: isLoadingMore ? 1 : 0.98,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 17,
+                }}
+                aria-label={
+                  isLoadingMore ? "Loading more recipes" : "Load more recipes"
+                }
               >
-                {isLoadingMore ? (
-                  <>
-                    <RotateCcw className="w-5 h-5 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-5 h-5" />
-                    Load More Recipes
-                  </>
-                )}
-              </Button>
+                {/* Background shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 sm:via-white/20 to-transparent"
+                  initial={{ x: "-100%" }}
+                  animate={{ x: isLoadingMore ? ["100%", "-100%"] : "100%" }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: isLoadingMore ? Number.POSITIVE_INFINITY : 0,
+                    ease: "linear",
+                  }}
+                />
+
+                {/* Button content */}
+                <div className="relative flex items-center justify-center gap-2 sm:gap-3">
+                  <AnimatePresence mode="wait">
+                    {isLoadingMore ? (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-2 sm:gap-3"
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Number.POSITIVE_INFINITY,
+                            ease: "linear",
+                          }}
+                        >
+                          <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </motion.div>
+                        <span className="font-medium">
+                          <span className="sm:hidden">Loading...</span>
+                          <span className="hidden sm:inline">
+                            Loading more recipes...
+                          </span>
+                        </span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="load-more"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-2 sm:gap-3"
+                      >
+                        <motion.div
+                          className="group-hover:animate-bounce"
+                          transition={{ duration: 0.6 }}
+                        >
+                          <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </motion.div>
+                        <span className="font-medium">
+                          <span className="sm:hidden">Load More</span>
+                          <span className="hidden sm:inline">
+                            Load More Recipes
+                          </span>
+                        </span>
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 }}
+                          className="bg-white/20 rounded-full px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium hidden sm:block"
+                        >
+                          {allRecipes.length}+
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Ripple effect on click */}
+                <motion.div
+                  className="absolute inset-0 bg-white/30 rounded-xl md:rounded-2xl"
+                  initial={{ scale: 0, opacity: 1 }}
+                  animate={{ scale: 0, opacity: 1 }}
+                  whileTap={{ scale: 1.5, opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                />
+              </motion.button>
             </motion.div>
           </div>
         </div>
@@ -262,11 +535,18 @@ export default function PopularRecipesPage() {
 
       {!hasMore && allRecipes.length > 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center mt-10 mb-4 text-gray-500"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mt-12 mb-4"
         >
-          <p>You&apos;ve reached the end of the list</p>
+          <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-full border border-gray-200 shadow-sm">
+            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+            <p className="text-gray-600 font-medium">
+              You&apos;ve reached the end of the list
+            </p>
+            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+          </div>
         </motion.div>
       )}
     </div>
