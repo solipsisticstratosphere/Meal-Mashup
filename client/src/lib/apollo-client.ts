@@ -12,14 +12,23 @@ const httpLink = createHttpLink({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const popularRecipesMerge: FieldPolicy<any[], any[]> = {
   keyArgs: false,
-  merge(existing = [], incoming) {
-    const merged = existing ? existing.slice(0) : [];
-
-    if (incoming) {
-      return [...merged, ...incoming];
+  merge(existing = [], incoming, { args }) {
+    if (args?.offset === 0) {
+      return incoming || [];
     }
 
-    return merged;
+    if (incoming) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingIds = new Set((existing || []).map((item: any) => item.id));
+      const uniqueIncoming = incoming.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (item: any) => !existingIds.has(item.id)
+      );
+
+      return [...(existing || []), ...uniqueIncoming];
+    }
+
+    return existing || [];
   },
 };
 
@@ -30,6 +39,9 @@ const cache = new InMemoryCache({
         popularRecipes: popularRecipesMerge,
       },
     },
+    Recipe: {
+      keyFields: ["id"],
+    },
   },
 });
 
@@ -39,6 +51,10 @@ export const apolloClient = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       fetchPolicy: "cache-and-network",
+      notifyOnNetworkStatusChange: true,
+    },
+    query: {
+      fetchPolicy: "cache-first",
     },
   },
 });

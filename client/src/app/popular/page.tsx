@@ -5,41 +5,78 @@ import { GET_POPULAR_RECIPES } from "@/lib/graphql";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import type { Recipe } from "@/lib/types";
-import { ChefHat, PlusCircle } from "lucide-react";
+import { ChefHat, PlusCircle, RotateCcw } from "lucide-react";
 import { FoodCard } from "@/components/main/food-card";
-import /*useEffect, useRef,*/ /*useState*/ "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecipeCardSkeleton } from "@/components/ui/recipe-card-skeleton";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
-// import useIntersectionObserver from "@/hooks/use-intersection-observer";
 
 export default function PopularRecipesPage() {
   const { data: session } = useSession();
-  // const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
-  // const [hasMore, setHasMore] = useState(true);
-  // const [isLoadingMore, setIsLoadingMore] = useState(false);
-  // const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
-  // const loadMoreRef = useRef(null);
-  // const RECIPES_PER_PAGE = 9;
-  // const allDataLoadedRef = useRef(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const RECIPES_PER_PAGE = 9;
 
-  const { data, loading, error, refetch } = useQuery(GET_POPULAR_RECIPES, {
-    // variables: { limit: RECIPES_PER_PAGE, offset: 0 },
+  const { data, loading, error, fetchMore } = useQuery(GET_POPULAR_RECIPES, {
+    variables: { limit: RECIPES_PER_PAGE, offset: 0 },
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
     context: {
       userId: session?.user?.id || "anonymous",
     },
+    onCompleted: (data) => {
+      if (
+        data?.popularRecipes &&
+        data.popularRecipes.length < RECIPES_PER_PAGE
+      ) {
+        setHasMore(false);
+      }
+    },
   });
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      refetch();
+  const allRecipes: Recipe[] = data?.popularRecipes || [];
+
+  const loadMoreRecipes = async () => {
+    if (isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+
+    try {
+      await fetchMore({
+        variables: {
+          limit: RECIPES_PER_PAGE,
+          offset: allRecipes.length,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult?.popularRecipes) return prev;
+
+          const newRecipes = fetchMoreResult.popularRecipes;
+
+          if (newRecipes.length < RECIPES_PER_PAGE) {
+            setHasMore(false);
+          }
+
+          const existingRecipeIds = new Set(
+            prev.popularRecipes.map((r: Recipe) => r.id)
+          );
+          const uniqueNewRecipes = newRecipes.filter(
+            (r: Recipe) => !existingRecipeIds.has(r.id)
+          );
+
+          return {
+            ...prev,
+            popularRecipes: [...prev.popularRecipes, ...uniqueNewRecipes],
+          };
+        },
+      });
+    } catch (err) {
+      console.error("Error loading more recipes:", err);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
     }
-  }, [session?.user?.id, refetch]);
-  // useEffect(() => { ... }, [data, loading]);
-  // useEffect(() => { ... }, [isIntersecting, ...]);
+  };
 
   const getSkeletonCount = () => {
     if (typeof window !== "undefined") {
@@ -54,18 +91,27 @@ export default function PopularRecipesPage() {
   const skeletons = Array.from({ length: skeletonCount }, (_, i) => i);
 
   const itemVariants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 0, y: 20 },
     show: {
       opacity: 1,
+      y: 0,
       transition: {
         duration: 0.3,
       },
     },
   };
 
-  // const loadMoreItemVariants = { ... };
-
-  const allRecipes: Recipe[] = data?.popularRecipes || [];
+  const loadMoreItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        delay: 0.1,
+      },
+    },
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-7xl">
@@ -130,7 +176,7 @@ export default function PopularRecipesPage() {
           {loading && allRecipes.length === 0 ? (
             <>
               {skeletons.map((index) => (
-                <RecipeCardSkeleton key={`skeleton-${index}`} />
+                <RecipeCardSkeleton key={`initial-skeleton-${index}`} />
               ))}
             </>
           ) : allRecipes.length > 0 ? (
@@ -160,6 +206,7 @@ export default function PopularRecipesPage() {
                     likes={recipe.likes || 0}
                     dislikes={recipe.dislikes || 0}
                     isSaved={recipe.isSaved}
+                    recipeRating={recipe.rating}
                   />
                 </motion.div>
               ))}
@@ -168,12 +215,10 @@ export default function PopularRecipesPage() {
         </AnimatePresence>
       </div>
 
-      {/* Инфинит-скролл и "load more" убраны */}
-      {/*
-      {hasMore && (
-        <div ref={loadMoreRef} className="mt-8 flex justify-center">
-          {loading && allRecipes.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 w-full">
+      {hasMore && allRecipes.length > 0 && (
+        <div className="mt-8 md:mt-12">
+          {isLoadingMore && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mb-8">
               {skeletons.map((index) => (
                 <motion.div
                   key={`load-more-skeleton-${index}`}
@@ -186,6 +231,32 @@ export default function PopularRecipesPage() {
               ))}
             </div>
           )}
+
+          <div className="flex justify-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Button
+                onClick={loadMoreRecipes}
+                disabled={isLoadingMore}
+                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-3 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <RotateCcw className="w-5 h-5 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-5 h-5" />
+                    Load More Recipes
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          </div>
         </div>
       )}
 
@@ -198,7 +269,6 @@ export default function PopularRecipesPage() {
           <p>You&apos;ve reached the end of the list</p>
         </motion.div>
       )}
-      */}
     </div>
   );
 }

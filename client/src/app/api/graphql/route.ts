@@ -9,7 +9,6 @@ import {
   Ingredient,
 } from "@/lib/models/Ingredient";
 import {
-  getAllRecipes,
   getRecipeById,
   RecipeInput,
   createCompleteRecipe,
@@ -38,6 +37,33 @@ interface RecipeVote {
   recipeId: string;
   voteType: string;
   createdAt: Date;
+}
+
+// Helper-функция для получения данных о голосах для списка ID рецептов
+async function getVotesForRecipeIds(recipeIds: string[]) {
+  if (!recipeIds.length) return { likesMap: new Map(), dislikesMap: new Map() };
+
+  const voteCounts = await prisma.recipeVote.groupBy({
+    by: ["recipeId", "voteType"],
+    where: {
+      recipeId: { in: recipeIds },
+    },
+    _count: {
+      voteType: true,
+    },
+  });
+
+  const likesMap = new Map<string, number>();
+  const dislikesMap = new Map<string, number>();
+
+  for (const group of voteCounts) {
+    if (group.voteType === "like") {
+      likesMap.set(group.recipeId, group._count.voteType);
+    } else if (group.voteType === "dislike") {
+      dislikesMap.set(group.recipeId, group._count.voteType);
+    }
+  }
+  return { likesMap, dislikesMap };
 }
 
 async function getUserFromSession() {
@@ -85,6 +111,7 @@ const typeDefs = `
     DISLIKE
     like
     dislike
+    UNVOTE
   }
 
   type User {
@@ -187,7 +214,7 @@ const typeDefs = `
 
   type Mutation {
     generateRecipe(ingredients: [ID!]!): Recipe!
-    voteRecipe(recipeId: ID!, vote: VoteType): Recipe!
+    voteRecipe(recipeId: ID!, vote: VoteType!): Recipe!
     createRecipe(recipe: RecipeInput!, ingredients: [RecipeIngredientInput!]!): Recipe!
     saveRecipe(recipeId: ID!): SaveRecipeResult!
     deleteRecipe(id: ID!): AuthResult!
@@ -223,15 +250,74 @@ const resolvers = {
       _: unknown,
       { limit = 12, offset = 0 }: { limit?: number; offset?: number }
     ) => {
-      const recipes = await getAllRecipes();
+      const user = await getUserFromSession();
+      const userId = user?.id;
 
-      const sortedRecipes = recipes.sort((a, b) => {
-        if (a.rating === null) return 1;
-        if (b.rating === null) return -1;
-        return b.rating - a.rating;
+      const recipesData = await prisma.recipe.findMany({
+        orderBy: [{ rating: "desc" }, { votes: "desc" }, { createdAt: "desc" }],
+        take: limit,
+        skip: offset,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          image_url: true,
+          prep_time_minutes: true,
+          cook_time_minutes: true,
+          servings: true,
+          difficulty: true,
+          instructions: true,
+          tags: true,
+          rating: true,
+          votes: true,
+          createdAt: true,
+          userId: true,
+        },
       });
 
-      return sortedRecipes.slice(offset, offset + limit);
+      if (!recipesData.length) {
+        return [];
+      }
+
+      const recipeIds = recipesData.map((r) => r.id);
+
+      const { likesMap, dislikesMap } = await getVotesForRecipeIds(recipeIds);
+
+      const userVotesForRecipesMap = new Map<string, string | null>();
+      const userSavesMap = new Map<string, boolean>();
+
+      if (userId) {
+        const userVotes = await prisma.recipeVote.findMany({
+          where: { userId, recipeId: { in: recipeIds } },
+          select: { recipeId: true, voteType: true },
+        });
+        userVotes.forEach((v) =>
+          userVotesForRecipesMap.set(v.recipeId, v.voteType)
+        );
+
+        const userSaves = await prisma.userSavedRecipe.findMany({
+          where: { userId, recipeId: { in: recipeIds } },
+          select: { recipeId: true },
+        });
+        userSaves.forEach((s) => userSavesMap.set(s.recipeId, true));
+      }
+
+      const result = recipesData.map((recipe) => {
+        const likes = likesMap.get(recipe.id) || 0;
+        const dislikes = dislikesMap.get(recipe.id) || 0;
+
+        return {
+          ...recipe,
+          createdAt: recipe.createdAt.toISOString(),
+
+          __likesCount: likes,
+          __dislikesCount: dislikes,
+          userVote: userVotesForRecipesMap.get(recipe.id) || null,
+          isSaved: userSavesMap.get(recipe.id) || false,
+        };
+      });
+
+      return result;
     },
     recipe: async (_: unknown, { id }: { id: string }) => {
       return await getRecipeById(id);
@@ -354,9 +440,24 @@ const resolvers = {
         ? new Date(parent.created_at).toISOString()
         : new Date().toISOString();
     },
-    votes: (parent: { rating?: number }) => {
-      return parent.rating ? Math.floor(parent.rating * 10) : 0;
+    votes: (parent: {
+      id: string;
+      votes?: number;
+      __likesCount?: number;
+      __dislikesCount?: number;
+    }) => {
+      if (parent.votes !== undefined) return parent.votes;
+
+      if (
+        parent.__likesCount !== undefined &&
+        parent.__dislikesCount !== undefined
+      ) {
+        return parent.__likesCount - parent.__dislikesCount;
+      }
+
+      return 0;
     },
+    rating: (parent: { rating?: number }) => parent.rating ?? 0, // Предполагаем, что rating обновляется в voteRecipe
 
     cookingMethod: (parent: { instructions?: string }) => {
       return parent.instructions || "";
@@ -366,92 +467,46 @@ const resolvers = {
       return parent.prep_time_minutes || 0;
     },
 
-    likes: async (parent: { id: string }) => {
-      try {
-        const count = await prisma.recipeVote.count({
-          where: {
-            recipeId: parent.id,
-            voteType: "like",
-          },
-        });
-        return count;
-      } catch (error) {
-        console.error("Error counting likes:", error);
-        return 0;
-      }
+    likes: async (parent: { id: string; __likesCount?: number }) => {
+      // Если предзагружено (из popularRecipes)
+      if (parent.__likesCount !== undefined) return parent.__likesCount;
+
+      // Иначе, считаем для одного рецепта (для страницы деталей recipe(id: ID!))
+      // Это нормально для запроса одного рецепта, но не для списков.
+      return prisma.recipeVote.count({
+        where: { recipeId: parent.id, voteType: "like" },
+      });
     },
 
-    dislikes: async (parent: { id: string }) => {
-      try {
-        const count = await prisma.recipeVote.count({
-          where: {
-            recipeId: parent.id,
-            voteType: "dislike",
-          },
-        });
-        return count;
-      } catch (error) {
-        console.error("Error counting dislikes:", error);
-        return 0;
-      }
+    dislikes: async (parent: { id: string; __dislikesCount?: number }) => {
+      if (parent.__dislikesCount !== undefined) return parent.__dislikesCount;
+      return prisma.recipeVote.count({
+        where: { recipeId: parent.id, voteType: "dislike" },
+      });
     },
 
-    userVote: async (parent: { id: string }) => {
-      try {
-        const user = await getUserFromSession();
+    userVote: async (parent: { id: string; userVote?: string | null }) => {
+      if (parent.userVote !== undefined) return parent.userVote; // Если предзагружено
 
-        if (!user || !user.id) {
-          return null;
-        }
-
-        const userId = user.id;
-        console.log(
-          `Checking vote for userId: ${userId}, recipeId: ${parent.id}`
-        );
-
-        const userVote = await prisma.recipeVote.findUnique({
-          where: {
-            userId_recipeId: {
-              userId: userId,
-              recipeId: parent.id,
-            },
-          },
-        });
-
-        console.log(`Found user vote:`, userVote);
-        return userVote?.voteType || null;
-      } catch (error) {
-        console.error("Error fetching user vote:", error);
-        return null;
-      }
+      const user = await getUserFromSession();
+      if (!user || !user.id) return null;
+      const vote = await prisma.recipeVote.findUnique({
+        where: { userId_recipeId: { userId: user.id, recipeId: parent.id } },
+        select: { voteType: true },
+      });
+      return vote?.voteType || null;
     },
 
     isSaved: async (parent: { id: string; isSaved?: boolean }) => {
-      if (parent.isSaved !== undefined) {
-        return parent.isSaved;
-      }
+      if (parent.isSaved !== undefined) return parent.isSaved; // Если предзагружено
 
-      try {
-        const user = await getUserFromSession();
-
-        if (!user || !user.id) {
-          return false;
-        }
-
-        const userId = user.id;
-        const recipeId = parent.id;
-
-        const savedRecipe = await prisma.$queryRaw`
-          SELECT * FROM user_saved_recipes 
-          WHERE user_id = ${userId} AND recipe_id = ${recipeId}
-          LIMIT 1
-        `;
-
-        return Array.isArray(savedRecipe) && savedRecipe.length > 0;
-      } catch (error) {
-        console.error("Error checking if recipe is saved:", error);
-        return false;
-      }
+      const user = await getUserFromSession();
+      if (!user || !user.id) return false;
+      const saved = await prisma.userSavedRecipe.findUnique({
+        where: { userId_recipeId: { userId: user.id, recipeId: parent.id } },
+        select: { id: true },
+      });
+      return !!saved;
     },
   },
   Mutation: {
@@ -722,123 +777,120 @@ const resolvers = {
     },
     voteRecipe: async (
       _: unknown,
-      { recipeId, vote }: { recipeId: string; vote: "LIKE" | "DISLIKE" | null }
+      {
+        recipeId,
+        vote,
+      }: { recipeId: string; vote: "LIKE" | "DISLIKE" | "UNVOTE" }
     ) => {
       try {
         const user = await getUserFromSession();
-
-        if (!user) {
-          throw new Error("Authentication required to vote on recipes");
+        if (!user || !user.id) {
+          throw new Error("Authentication required");
         }
-
-        if (!user.id) {
-          throw new Error("User ID is missing");
-        }
-
         const userId = user.id;
-        console.log(
-          `Vote request from userId: ${userId} for recipeId: ${recipeId}, vote: ${vote}`
-        );
 
         const existingVote = await prisma.recipeVote.findUnique({
-          where: {
-            userId_recipeId: {
-              userId: userId,
-              recipeId: recipeId,
-            },
-          },
+          where: { userId_recipeId: { userId, recipeId } },
         });
 
-        console.log("Existing vote:", existingVote);
-
-        if (vote === null) {
+        if (vote === "UNVOTE") {
           if (existingVote) {
-            await prisma.recipeVote.delete({
-              where: {
-                id: existingVote.id,
+            await prisma.recipeVote.delete({ where: { id: existingVote.id } });
+            console.log(`Deleted vote: ${existingVote.id} due to UNVOTE`);
+          }
+        } else {
+          const voteType = vote.toLowerCase();
+
+          if (existingVote) {
+            if (existingVote.voteType === voteType) {
+              await prisma.recipeVote.delete({
+                where: { id: existingVote.id },
+              });
+              console.log(
+                `Deleted vote: ${existingVote.id} due to same type click`
+              );
+            } else {
+              console.log(
+                `Updating vote from ${existingVote.voteType} to ${voteType}`
+              );
+              await prisma.recipeVote.update({
+                where: { id: existingVote.id },
+                data: { voteType },
+              });
+            }
+          } else {
+            console.log(`Creating new vote: ${voteType}`);
+            await prisma.recipeVote.create({
+              data: {
+                userId,
+                recipeId,
+                voteType,
               },
             });
-            console.log(`Deleted vote: ${existingVote.id}`);
           }
-
-          const recipe = await prisma.recipe.findUnique({
-            where: { id: recipeId },
-          });
-
-          return {
-            id: recipeId,
-            votes: recipe?.votes || 0,
-            userVote: null,
-          };
-        }
-
-        const voteType = vote.toLowerCase();
-
-        if (existingVote) {
-          console.log(
-            `Updating vote from ${existingVote.voteType} to ${voteType}`
-          );
-          await prisma.recipeVote.update({
-            where: {
-              id: existingVote.id,
-            },
-            data: {
-              voteType: voteType,
-            },
-          });
-        } else {
-          console.log(`Creating new vote: ${voteType}`);
-          await prisma.recipeVote.create({
-            data: {
-              id: crypto.randomUUID(),
-              userId: userId,
-              recipeId: recipeId,
-              voteType: voteType,
-            },
-          });
         }
 
         const likeCount = await prisma.recipeVote.count({
-          where: {
-            recipeId: recipeId,
-            voteType: "like",
-          },
+          where: { recipeId, voteType: "like" },
         });
-
         const dislikeCount = await prisma.recipeVote.count({
-          where: {
-            recipeId: recipeId,
-            voteType: "dislike",
-          },
+          where: { recipeId, voteType: "dislike" },
         });
 
-        console.log(
-          `New counts - likes: ${likeCount}, dislikes: ${dislikeCount}`
-        );
-        const totalVotes = likeCount - dislikeCount;
+        const totalRecipeVotes = likeCount + dislikeCount;
 
-        const recipe = await prisma.recipe.findUnique({
-          where: { id: recipeId },
-        });
+        const globalAverageRatingPrior = 5;
+        const confidenceWeight = 10;
 
-        if (!recipe) {
-          throw new Error(`Recipe with ID ${recipeId} not found`);
+        let newRating: number | null = null;
+        if (totalRecipeVotes > 0) {
+          newRating = Math.round(
+            (likeCount * 10 + globalAverageRatingPrior * confidenceWeight) /
+              (totalRecipeVotes + confidenceWeight)
+          );
+          newRating = Math.min(Math.max(newRating, 0), 10);
+        } else {
+          newRating = 0;
         }
 
-        await prisma.recipe.update({
+        const updatedRecipe = await prisma.recipe.update({
           where: { id: recipeId },
           data: {
-            votes: totalVotes,
+            votes: likeCount - dislikeCount,
+            rating: newRating,
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            image_url: true,
+            prep_time_minutes: true,
+            cook_time_minutes: true,
+            servings: true,
+            difficulty: true,
+            instructions: true,
+            tags: true,
+            rating: true,
+            featured: true,
+            createdAt: true,
+            votes: true,
+            userId: true,
           },
         });
 
-        console.log(`Updated recipe votes to: ${totalVotes}`);
+        let finalUserVoteType: string | null = null;
+        const latestVoteRecord = await prisma.recipeVote.findUnique({
+          where: { userId_recipeId: { userId, recipeId } },
+          select: { voteType: true },
+        });
+        finalUserVoteType = latestVoteRecord?.voteType || null;
+
         return {
-          id: recipeId,
-          votes: totalVotes,
-          userVote: voteType,
+          ...updatedRecipe,
           likes: likeCount,
           dislikes: dislikeCount,
+          userVote: finalUserVoteType,
+          createdAt: updatedRecipe.createdAt.toISOString(),
         };
       } catch (error) {
         console.error("Error voting for recipe:", error);

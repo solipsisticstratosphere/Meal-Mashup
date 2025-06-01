@@ -46,6 +46,7 @@ export interface Recipe {
   difficulty: DifficultyLevel;
   createdAt: Date | string;
   votes: number;
+  rating?: number | null;
   likes?: number;
   dislikes?: number;
   userVote?: "like" | "dislike" | null;

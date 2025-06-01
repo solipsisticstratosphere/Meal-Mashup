@@ -25,6 +25,7 @@ interface FoodCardProps {
   isClickable?: boolean;
   isSaved?: boolean;
   showSaveButton?: boolean;
+  recipeRating?: number | null;
 }
 
 export function FoodCard({
@@ -42,6 +43,7 @@ export function FoodCard({
   isClickable = true,
   isSaved = false,
   showSaveButton = true,
+  recipeRating,
 }: FoodCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState(userVote);
@@ -54,6 +56,10 @@ export function FoodCard({
   const href = from ? `/recipes/${id}?from=${from}` : `/recipes/${id}`;
 
   const totalVotes = Math.max(0, rating || currentLikes - currentDislikes);
+  const displayRating =
+    recipeRating !== undefined && recipeRating !== null
+      ? recipeRating
+      : totalVotes;
 
   const {
     votedRecipes,
@@ -116,47 +122,59 @@ export function FoodCard({
       return;
     }
 
-    try {
-      const voteToSend = currentUserVote === vote ? null : vote;
+    const voteToSend = currentUserVote === vote ? "UNVOTE" : vote;
 
-      const oldVote = currentUserVote;
+    const oldUserVote = currentUserVote;
+    const oldLikes = currentLikes;
+    const oldDislikes = currentDislikes;
 
-      if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
-      if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+    if (voteToSend === "UNVOTE") {
+      if (oldUserVote === "like") setCurrentLikes((prev) => prev - 1);
+      if (oldUserVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+      setCurrentUserVote(null);
+    } else {
+      if (oldUserVote === "like") setCurrentLikes((prev) => prev - 1);
+      if (oldUserVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+
       if (voteToSend === "like") setCurrentLikes((prev) => prev + 1);
       if (voteToSend === "dislike") setCurrentDislikes((prev) => prev + 1);
-
       setCurrentUserVote(voteToSend);
+    }
 
-      storeVoteRecipe(id, voteToSend);
+    storeVoteRecipe(id, voteToSend === "UNVOTE" ? null : voteToSend);
 
+    try {
       const { data } = await voteRecipeMutation({
         variables: { recipeId: id, vote: voteToSend },
       });
 
       if (data?.voteRecipe) {
-        if (data.voteRecipe.userVote !== voteToSend) {
-          setCurrentUserVote(data.voteRecipe.userVote);
-          storeVoteRecipe(id, data.voteRecipe.userVote);
+        const serverUserVote = data.voteRecipe.userVote;
+        const serverLikes = data.voteRecipe.likes;
+        const serverDislikes = data.voteRecipe.dislikes;
+
+        setCurrentUserVote(serverUserVote);
+        storeVoteRecipe(id, serverUserVote);
+
+        if (serverLikes !== undefined) {
+          setCurrentLikes(serverLikes);
+        }
+        if (serverDislikes !== undefined) {
+          setCurrentDislikes(serverDislikes);
         }
 
-        if (data.voteRecipe.likes !== undefined) {
-          setCurrentLikes(data.voteRecipe.likes);
-        }
-
-        if (data.voteRecipe.dislikes !== undefined) {
-          setCurrentDislikes(data.voteRecipe.dislikes);
-        }
-
-        toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
+        toast.success(
+          `${voteToSend !== "UNVOTE" ? "Vote recorded" : "Vote removed"}`
+        );
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
       toast.error("Failed to record your vote");
 
-      setCurrentUserVote(votedRecipes[id] || userVote);
-      setCurrentLikes(likes);
-      setCurrentDislikes(dislikes);
+      setCurrentUserVote(oldUserVote);
+      storeVoteRecipe(id, oldUserVote);
+      setCurrentLikes(oldLikes);
+      setCurrentDislikes(oldDislikes);
     }
   };
 
@@ -294,7 +312,7 @@ export function FoodCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span className="ml-1 text-sm font-medium">{totalVotes}</span>
+              <span className="ml-1 text-sm font-medium">{displayRating}</span>
               <span className="ml-2 text-xs text-slate-500">
                 ({currentLikes} likes, {currentDislikes} dislikes)
               </span>

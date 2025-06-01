@@ -37,6 +37,7 @@ export const GET_POPULAR_RECIPES = gql`
       tags
       userVote
       isSaved
+      rating
     }
   }
 `;
@@ -66,6 +67,7 @@ export const GET_RECIPE = gql`
       user_id
       userVote
       isSaved
+      rating
     }
   }
 `;
@@ -95,6 +97,7 @@ export const GET_MY_RECIPES = gql`
       tags
       userVote
       isSaved
+      rating
     }
   }
 `;
@@ -126,13 +129,14 @@ export const GENERATE_RECIPE = gql`
 `;
 
 export const VOTE_RECIPE = gql`
-  mutation VoteRecipe($recipeId: ID!, $vote: VoteType) {
+  mutation VoteRecipe($recipeId: ID!, $vote: VoteType!) {
     voteRecipe(recipeId: $recipeId, vote: $vote) {
       id
       votes
       userVote
       likes
       dislikes
+      rating
     }
   }
 `;
@@ -299,6 +303,7 @@ export const GET_SAVED_RECIPES = gql`
       tags
       userVote
       isSaved
+      rating
     }
   }
 `;
