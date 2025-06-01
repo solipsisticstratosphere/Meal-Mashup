@@ -40,7 +40,7 @@ This project showcases the potential of AI in everyday life, making cooking more
 
 ```
 bash
-    git clone <repository_url>
+    git clone https://github.com/solipsisticstratosphere/Meal-Mashup.git
     cd meal-mashup
 
 ```
@@ -57,8 +57,10 @@ env
 
 ```
 
-Replace the placeholder values with your actual database connection string, NextAuth URL, a strong secret for NextAuth, and your OpenAI API key. 3. **Install dependencies:**
-Navigate to the `client` directory and install the dependencies:
+Replace the placeholder values with your actual database connection string, NextAuth URL, a strong secret for NextAuth, and your OpenAI API key.
+
+3.  **Install dependencies:**
+    Navigate to the `client` directory and install the dependencies:
 
 ```
 bash
@@ -124,7 +126,7 @@ Meal Mashup - це революційний додаток, який викор�
 
 ```
 bash
-    git clone <repository_url>
+    git clone https://github.com/solipsisticstratosphere/Meal-Mashup.git
     cd meal-mashup
 
 ```
@@ -141,8 +143,10 @@ env
 
 ```
 
-Замініть значення заповнювачів на ваш фактичний рядок підключення до бази даних, URL NextAuth, сильний секрет для NextAuth та ваш ключ API OpenAI. 3. **Встановіть залежності:**
-Перейдіть до каталогу `client` та встановіть залежності:
+Замініть значення заповнювачів на ваш фактичний рядок підключення до бази даних, URL NextAuth, сильний секрет для NextAuth та ваш ключ API OpenAI.
+
+3.  **Встановіть залежності:**
+    Перейдіть до каталогу `client` та встановіть залежності:
 
 ```
 bash
