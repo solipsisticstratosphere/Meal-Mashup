@@ -178,7 +178,7 @@ export const generateRecipeFromIngredients = async (
         generationConfig: {
           temperature: 0.7,
           topP: 0.95,
-          maxOutputTokens: 500,
+          maxOutputTokens: 2048,
         },
       }),
     });
@@ -241,8 +241,8 @@ export const generateRecipeFromIngredients = async (
           typeof recipeData.cookingMethod === "string"
             ? recipeData.cookingMethod
             : Array.isArray(recipeData.cookingMethod)
-            ? (recipeData.cookingMethod as string[]).join("\n")
-            : "No instructions provided",
+              ? (recipeData.cookingMethod as string[]).join("\n")
+              : "No instructions provided",
         preparationTime: recipeData.preparationTime
           ? parseInt(String(recipeData.preparationTime))
           : 30,
@@ -344,12 +344,12 @@ function generateFallbackRecipe(
               ing.toLowerCase().includes("rice")
                 ? "cups"
                 : ing.toLowerCase().includes("carrot") ||
-                  ing.toLowerCase().includes("apple")
-                ? "pieces"
-                : ing.toLowerCase().includes("mint") ||
-                  ing.toLowerCase().includes("herb")
-                ? "tablespoons"
-                : "portions"
+                    ing.toLowerCase().includes("apple")
+                  ? "pieces"
+                  : ing.toLowerCase().includes("mint") ||
+                      ing.toLowerCase().includes("herb")
+                    ? "tablespoons"
+                    : "portions"
             }`,
     })),
     cookingMethod: generateCookingMethod(ingredientNames),
