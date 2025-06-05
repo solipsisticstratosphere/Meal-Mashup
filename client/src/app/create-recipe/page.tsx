@@ -208,89 +208,81 @@ export default function CreateRecipePage() {
       setFlyingComplete(true);
       setShowGenerationAnimation(true);
 
-      const animationStartTime = Date.now();
-      const MINIMUM_ANIMATION_TIME = 10000;
-
-      const generateRecipe = async () => {
-        let recipe: Recipe | null = null;
-
-        try {
-          const result = await generateRecipeMutation({
-            variables: {
-              ingredients: selectedIngredients.map((i) => i.id),
-            },
-          });
-
-          if (result.data?.generateRecipe) {
-            recipe = result.data.generateRecipe;
-
-            if (recipe && !recipe.user_id) {
-              toast(
-                <div className="flex flex-col">
-                  <span className="font-medium">
-                    Recipe generated successfully!
-                  </span>
-                  <span className="text-sm mt-1">
-                    Create an account to save your recipes and share them with
-                    others.
-                  </span>
-                </div>,
-                {
-                  duration: 5000,
-                  position: "top-center",
-                  className:
-                    "bg-amber-50 text-amber-800 border border-amber-200",
-                }
-              );
-            }
-          } else {
-            recipe = await generateRecipeUsingHuggingFace();
-          }
-        } catch (error) {
-          console.error("Error generating recipe:", error);
-          recipe = await generateRecipeUsingHuggingFace();
-        }
-
-        if (!recipe) {
-          recipe = createFallbackRecipe();
-        }
-
-        const elapsedTime = Date.now() - animationStartTime;
-
-        if (elapsedTime >= MINIMUM_ANIMATION_TIME) {
-          showFinalRecipe(recipe);
-        } else {
-          const remainingTime = MINIMUM_ANIMATION_TIME - elapsedTime;
-          console.log(`Waiting ${remainingTime}ms to complete the animation`);
-
-          setTimeout(() => {
-            showFinalRecipe(recipe);
-          }, remainingTime);
-        }
-      };
-
-      const showFinalRecipe = (recipeData: Recipe) => {
-        const completeRecipe: Recipe = {
-          ...recipeData,
-          id: recipeData.id || generateUuid(),
-          votes: recipeData.votes ?? 0,
-          likes: recipeData.likes ?? 0,
-          dislikes: recipeData.dislikes ?? 0,
-          rating: recipeData.rating ?? 3,
-          userVote: recipeData.userVote ?? null,
-          isSaved: recipeData.isSaved ?? false,
-          image_url: recipeData.image_url || undefined,
-          tags: recipeData.tags || [],
-        };
-        setCurrentRecipe(completeRecipe);
-        setShowGenerationAnimation(false);
-        setIsGenerating(false);
-        setAnimatingIngredients([]);
-        setFlyingComplete(false);
-      };
-
       generateRecipe();
     }, 1000);
+  };
+
+  const generateRecipe = async () => {
+    let recipe: Recipe | null = null;
+
+    try {
+      const result = await generateRecipeMutation({
+        variables: {
+          ingredients: selectedIngredients.map((i) => i.id),
+        },
+      });
+
+      if (result.data?.generateRecipe) {
+        recipe = result.data.generateRecipe;
+
+        if (recipe && !recipe.user_id) {
+          toast(
+            <div className="flex flex-col">
+              <span className="font-medium">
+                Recipe generated successfully!
+              </span>
+              <span className="text-sm mt-1">
+                Create an account to save your recipes and share them with
+                others.
+              </span>
+            </div>,
+            {
+              duration: 5000,
+              position: "top-center",
+              className: "bg-amber-50 text-amber-800 border border-amber-200",
+            }
+          );
+        }
+      } else {
+        recipe = await generateRecipeUsingHuggingFace();
+      }
+    } catch (error) {
+      console.error("Error generating recipe:", error);
+      recipe = await generateRecipeUsingHuggingFace();
+    }
+
+    if (!recipe) {
+      recipe = createFallbackRecipe();
+    }
+
+    const minimumAnimationTime = 7000;
+    const animationStartTime = Date.now() - 1000;
+    const elapsedTime = Date.now() - animationStartTime;
+    const remainingTime = Math.max(0, minimumAnimationTime - elapsedTime);
+
+    setTimeout(() => {
+      showFinalRecipe(recipe!);
+    }, remainingTime);
+  };
+
+  const showFinalRecipe = (recipeData: Recipe) => {
+    const completeRecipe: Recipe = {
+      ...recipeData,
+      id: recipeData.id || generateUuid(),
+      votes: recipeData.votes ?? 0,
+      likes: recipeData.likes ?? 0,
+      dislikes: recipeData.dislikes ?? 0,
+      rating: recipeData.rating ?? 3,
+      userVote: recipeData.userVote ?? null,
+      isSaved: recipeData.isSaved ?? false,
+      image_url: recipeData.image_url || undefined,
+      tags: recipeData.tags || [],
+    };
+    setCurrentRecipe(completeRecipe);
+    setShowGenerationAnimation(false);
+    setIsGenerating(false);
+    setAnimatingIngredients([]);
+    setFlyingComplete(false);
   };
 
   const handleGenerateNewRecipe = () => {
@@ -447,6 +439,7 @@ export default function CreateRecipePage() {
                 <RouletteWheel
                   isSpinning={flyingComplete}
                   onComplete={() => {}}
+                  selectedIngredients={selectedIngredients}
                 />
               </div>
             ) : (
@@ -586,13 +579,14 @@ const FlyingIngredient = ({
 
   const getCategoryColor = (category: string): string => {
     const colors: Record<string, string> = {
+      Meat: "bg-red-100 text-red-800",
       Protein: "bg-red-100 text-red-800",
-      Vegetable: "bg-green-100 text-green-800",
-      Fruit: "bg-purple-100 text-purple-800",
-      Grain: "bg-yellow-100 text-yellow-800",
+      Vegetables: "bg-green-100 text-green-800",
+      Fruit: "bg-amber-100 text-amber-800",
+      Grains: "bg-yellow-100 text-yellow-800",
       Dairy: "bg-blue-100 text-blue-800",
-      Spice: "bg-orange-100 text-orange-800",
-      Herb: "bg-emerald-100 text-emerald-800",
+      Spices: "bg-orange-100 text-orange-800",
+      Herbs: "bg-emerald-100 text-emerald-800",
       Oil: "bg-amber-100 text-amber-800",
       Condiment: "bg-pink-100 text-pink-800",
       Other: "bg-gray-100 text-gray-800",

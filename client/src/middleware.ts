@@ -10,6 +10,14 @@ const authPages = [
   "/auth/reset-password",
 ];
 
+const protectedRoutes = [
+  "/profile",
+  "/dashboard",
+  "/settings",
+  "/my-recipes",
+  "/saved-recipes",
+];
+
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
@@ -28,6 +36,19 @@ export async function middleware(req: NextRequest) {
     }
 
     return NextResponse.next();
+  }
+
+  if (protectedRoutes.some((route) => path.startsWith(route))) {
+    const token = await getToken({ req });
+
+    if (!token) {
+      console.log(
+        `[Middleware] Unauthenticated access attempt to ${path}, redirecting to login`
+      );
+      return NextResponse.redirect(
+        new URL(`/auth/login?returnUrl=${encodeURIComponent(path)}`, req.url)
+      );
+    }
   }
 
   console.log(`[Middleware] Path: ${path}, allowing request to proceed`);

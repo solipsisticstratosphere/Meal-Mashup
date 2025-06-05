@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
 const ProfilePage = () => {
-  const { data: session, update: updateSession } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -47,6 +47,12 @@ const ProfilePage = () => {
   const [changePassword] = useMutation(CHANGE_PASSWORD);
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/login?returnUrl=/profile");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
     if (data?.me) {
       setName(data.me.name || "");
       setImageUrl(data.me.image_url || "");
@@ -67,6 +73,14 @@ const ProfilePage = () => {
       setPasswordStrength(3);
     }
   }, [newPassword]);
+
+  if (status === "loading") {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -430,10 +444,10 @@ const ProfilePage = () => {
                             passwordStrength === 1
                               ? "#ef4444"
                               : passwordStrength === 2
-                              ? "#eab308"
-                              : passwordStrength === 3
-                              ? "#22c55e"
-                              : "#6b7280",
+                                ? "#eab308"
+                                : passwordStrength === 3
+                                  ? "#22c55e"
+                                  : "#6b7280",
                         }}
                       >
                         {getPasswordStrengthText()}

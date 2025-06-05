@@ -37,19 +37,22 @@ export default function IngredientCard({
 
   const getCategoryColor = (category: string): string => {
     const colors: Record<string, string> = {
-      Protein: "bg-red-100 text-red-800",
-      Vegetable: "bg-green-100 text-green-800",
-      Fruit: "bg-purple-100 text-purple-800",
-      Grain: "bg-yellow-100 text-yellow-800",
-      Dairy: "bg-blue-100 text-blue-800",
-      Spice: "bg-orange-100 text-orange-800",
-      Herb: "bg-emerald-100 text-emerald-800",
-      Oil: "bg-amber-100 text-amber-800",
-      Condiment: "bg-pink-100 text-pink-800",
-      Other: "bg-gray-100 text-gray-800",
+      Meat: "bg-red-100 text-red-800 border border-red-200",
+      Protein: "bg-red-100 text-red-800 border border-red-200",
+      Vegetables: "bg-green-100 text-green-800 border border-green-200",
+      Fruit: "bg-amber-100 text-amber-800 border border-amber-200",
+      Grains: "bg-blue-100 text-blue-800 border border-blue-200",
+      Dairy: "bg-purple-100 text-purple-800 border border-purple-200",
+      Spices: "bg-orange-100 text-orange-800 border border-orange-200",
+      Herbs: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+      Oil: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+      Condiment: "bg-pink-100 text-pink-800 border border-pink-200",
+      Other: "bg-indigo-100 text-indigo-800 border border-indigo-200",
     };
 
-    return colors[category] || "bg-gray-100 text-gray-800";
+    return (
+      colors[category] || "bg-gray-100 text-gray-800 border border-gray-200"
+    );
   };
 
   return (
