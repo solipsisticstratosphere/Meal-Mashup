@@ -78,6 +78,15 @@ async function getUserFromSession() {
   }
 }
 
+// function calculateRating(likes: number, dislikes: number): number {
+//   const totalVotes = likes + dislikes;
+//   if (totalVotes === 0) {
+//     return 0;
+//   }
+//   const rating = (likes / totalVotes) * 10;
+//   return Math.round(rating * 10) / 10;
+// }
+
 const typeDefs = `
   enum IngredientCategory {
     Meat
@@ -191,7 +200,14 @@ const typeDefs = `
   type Query {
     ingredients(search: String, category: String): [Ingredient!]!
     ingredient(id: ID!): Ingredient
-    popularRecipes(limit: Int, offset: Int): [Recipe!]!
+    popularRecipes(
+      limit: Int
+      offset: Int
+      difficulty: [String]
+      maxPrepTime: Int
+      minRating: Float
+      ingredients: [ID!]
+    ): [Recipe!]!
     recipe(id: ID!): Recipe
     myRecipes: [Recipe!]!
     recipeVotes(recipeId: ID!): RecipeVotes!
@@ -229,11 +245,18 @@ const resolvers = {
   Query: {
     ingredients: async (
       _: unknown,
-      { search, category }: { search?: string; category?: string }
+      {
+        search,
+        category,
+        ids,
+      }: { search?: string; category?: string; ids?: string[] }
     ) => {
+      if (ids && ids.length > 0) {
+        return await prisma.ingredient.findMany({ where: { id: { in: ids } } });
+      }
       if (search && category) {
         const ingredients = await searchIngredients(search);
-        return ingredients.filter((i) => i.category === category);
+        return ingredients.filter((i: Ingredient) => i.category === category);
       } else if (search) {
         return await searchIngredients(search);
       } else if (category) {
@@ -247,12 +270,61 @@ const resolvers = {
     },
     popularRecipes: async (
       _: unknown,
-      { limit = 12, offset = 0 }: { limit?: number; offset?: number }
+      {
+        limit = 12,
+        offset = 0,
+        difficulty,
+        maxPrepTime,
+        minRating,
+        ingredients,
+      }: {
+        limit?: number;
+        offset?: number;
+        difficulty?: string[];
+        maxPrepTime?: number;
+        minRating?: number;
+        ingredients?: string[];
+      }
     ) => {
       const user = await getUserFromSession();
       const userId = user?.id;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const where: { AND?: any[] } = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conditions: any[] = [];
+
+      if (difficulty && difficulty.length > 0) {
+        conditions.push({
+          OR: difficulty.map((d) => ({
+            difficulty: {
+              equals: d,
+              mode: "insensitive",
+            },
+          })),
+        });
+      }
+
+      if (maxPrepTime) {
+        conditions.push({ prep_time_minutes: { lte: maxPrepTime } });
+      }
+
+      if (minRating) {
+        conditions.push({ rating: { gte: minRating } });
+      }
+
+      if (ingredients && ingredients.length > 0) {
+        conditions.push({
+          ingredients: { some: { ingredientId: { in: ingredients } } },
+        });
+      }
+
+      if (conditions.length > 0) {
+        where.AND = conditions;
+      }
+
       const recipesData = await prisma.recipe.findMany({
+        where,
         orderBy: [{ rating: "desc" }, { votes: "desc" }, { createdAt: "desc" }],
         take: limit,
         skip: offset,
@@ -278,7 +350,7 @@ const resolvers = {
         return [];
       }
 
-      const recipeIds = recipesData.map((r) => r.id);
+      const recipeIds = recipesData.map((r: { id: string }) => r.id);
 
       const { likesMap, dislikesMap } = await getVotesForRecipeIds(recipeIds);
 
@@ -290,7 +362,7 @@ const resolvers = {
           where: { userId, recipeId: { in: recipeIds } },
           select: { recipeId: true, voteType: true },
         });
-        userVotes.forEach((v) =>
+        userVotes.forEach((v: { recipeId: string; voteType: string }) =>
           userVotesForRecipesMap.set(v.recipeId, v.voteType)
         );
 
@@ -298,23 +370,26 @@ const resolvers = {
           where: { userId, recipeId: { in: recipeIds } },
           select: { recipeId: true },
         });
-        userSaves.forEach((s) => userSavesMap.set(s.recipeId, true));
+        userSaves.forEach((s: { recipeId: string }) =>
+          userSavesMap.set(s.recipeId, true)
+        );
       }
 
-      const result = recipesData.map((recipe) => {
-        const likes = likesMap.get(recipe.id) || 0;
-        const dislikes = dislikesMap.get(recipe.id) || 0;
+      const result = recipesData.map(
+        (recipe: { id: string; createdAt: Date }) => {
+          const likes = likesMap.get(recipe.id) || 0;
+          const dislikes = dislikesMap.get(recipe.id) || 0;
 
-        return {
-          ...recipe,
-          createdAt: recipe.createdAt.toISOString(),
-
-          __likesCount: likes,
-          __dislikesCount: dislikes,
-          userVote: userVotesForRecipesMap.get(recipe.id) || null,
-          isSaved: userSavesMap.get(recipe.id) || false,
-        };
-      });
+          return {
+            ...recipe,
+            createdAt: recipe.createdAt.toISOString(),
+            __likesCount: likes,
+            __dislikesCount: dislikes,
+            userVote: userVotesForRecipesMap.get(recipe.id) || null,
+            isSaved: userSavesMap.get(recipe.id) || false,
+          };
+        }
+      );
 
       return result;
     },

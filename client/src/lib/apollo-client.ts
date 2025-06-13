@@ -11,24 +11,17 @@ const httpLink = createHttpLink({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const popularRecipesMerge: FieldPolicy<any[], any[]> = {
-  keyArgs: false,
+  keyArgs: ["difficulty", "maxPrepTime", "minRating", "ingredients"],
   merge(existing = [], incoming, { args }) {
-    if (args?.offset === 0) {
-      return incoming || [];
-    }
-
+    const merged = existing ? existing.slice(0) : [];
     if (incoming) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingIds = new Set((existing || []).map((item: any) => item.id));
-      const uniqueIncoming = incoming.filter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (item: any) => !existingIds.has(item.id)
-      );
-
-      return [...(existing || []), ...uniqueIncoming];
+      if (args?.offset) {
+        merged.splice(args.offset, incoming.length, ...incoming);
+      } else {
+        return incoming;
+      }
     }
-
-    return existing || [];
+    return merged;
   },
 };
 

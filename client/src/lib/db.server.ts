@@ -9,6 +9,7 @@ const dbConfig = {
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
   ssl:
     process.env.POSTGRES_SSL === "true" ? { rejectUnauthorized: false } : false,
 };
@@ -27,31 +28,61 @@ pool.on("error", (err: Error) => {
   }
 });
 
-export async function query<T>(text: string, params?: unknown[]): Promise<T[]> {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result.rows as T[];
-  } finally {
-    client.release();
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  retries = 3,
+  delay = 1000
+): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error(
+        `Database operation failed (attempt ${attempt + 1}/${retries}):`,
+        error
+      );
+      lastError = error as Error;
+
+      if (attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
   }
+
+  throw lastError!;
+}
+
+export async function query<T>(text: string, params?: unknown[]): Promise<T[]> {
+  return withRetry(async () => {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(text, params);
+      return result.rows as T[];
+    } finally {
+      client.release();
+    }
+  });
 }
 
 export async function transaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const result = await callback(client);
-    await client.query("COMMIT");
-    return result;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  return withRetry(async () => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await callback(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  });
 }
 
 export async function getById<T>(table: string, id: string): Promise<T | null> {

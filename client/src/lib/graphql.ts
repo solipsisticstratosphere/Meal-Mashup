@@ -13,8 +13,22 @@ export const GET_INGREDIENTS = gql`
 `;
 
 export const GET_POPULAR_RECIPES = gql`
-  query GetPopularRecipes($limit: Int, $offset: Int) {
-    popularRecipes(limit: $limit, offset: $offset) {
+  query GetPopularRecipes(
+    $limit: Int
+    $offset: Int
+    $difficulty: [String]
+    $maxPrepTime: Int
+    $minRating: Float
+    $ingredients: [ID!]
+  ) {
+    popularRecipes(
+      limit: $limit
+      offset: $offset
+      difficulty: $difficulty
+      maxPrepTime: $maxPrepTime
+      minRating: $minRating
+      ingredients: $ingredients
+    ) {
       id
       title
       image_url
@@ -38,6 +52,7 @@ export const GET_POPULAR_RECIPES = gql`
       userVote
       isSaved
       rating
+      description
     }
   }
 `;

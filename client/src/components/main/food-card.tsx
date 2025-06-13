@@ -26,6 +26,7 @@ interface FoodCardProps {
   isSaved?: boolean;
   showSaveButton?: boolean;
   recipeRating?: number | null;
+  description?: string;
 }
 
 export function FoodCard({
@@ -44,6 +45,7 @@ export function FoodCard({
   isSaved = false,
   showSaveButton = true,
   recipeRating,
+  description,
 }: FoodCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState(userVote);
@@ -289,29 +291,17 @@ export function FoodCard({
           </div>
         )}
 
-        <div className="p-5">
-          {isClickable ? (
-            <Link href={href}>
-              <h3 className="font-bold text-lg mb-2 truncate">{title}</h3>
-            </Link>
-          ) : (
-            <h3 className="font-bold text-lg mb-2">{title}</h3>
-          )}
+        <div className="p-4">
+          <h3 className="text-lg font-bold text-gray-800 truncate group-hover:text-amber-500 transition-colors">
+            {title}
+          </h3>
+          <p className="text-sm text-gray-600 mt-1 h-10 overflow-hidden text-ellipsis">
+            {description?.trim() ? description : "No description available."}
+          </p>
 
-          <div className="flex flex-wrap gap-2 mb-3">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between">
+          <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center">
-              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <Star className="w-5 h-5 text-amber-400" />
               <span className="ml-1 text-sm font-medium">{displayRating}</span>
               <span className="ml-2 text-xs text-slate-500">
                 ({currentLikes} likes, {currentDislikes} dislikes)
