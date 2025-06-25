@@ -23,6 +23,15 @@ const categories: IngredientCategory[] = [
   "Condiment",
   "Other",
   "Protein",
+  "Seafood",
+  "Legumes",
+  "Bakery",
+  "Baking",
+  "Nuts",
+  "Seeds",
+  "Sweeteners",
+  "Beverages",
+  "Spreads",
 ];
 
 const categoryEmojis: Record<IngredientCategory, string> = {
@@ -37,6 +46,15 @@ const categoryEmojis: Record<IngredientCategory, string> = {
   Condiment: "🍯",
   Other: "📦",
   Protein: "🥚",
+  Seafood: "🦐",
+  Legumes: "🫘",
+  Bakery: "🥖",
+  Baking: "🧁",
+  Nuts: "🥜",
+  Seeds: "🌰",
+  Sweeteners: "🍯",
+  Beverages: "🥤",
+  Spreads: "🧈",
 };
 
 export default function CategorySelect({

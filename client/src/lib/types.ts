@@ -9,7 +9,16 @@ export type IngredientCategory =
   | "Oil"
   | "Condiment"
   | "Other"
-  | "Protein";
+  | "Protein"
+  | "Seafood"
+  | "Legumes"
+  | "Bakery"
+  | "Baking"
+  | "Nuts"
+  | "Seeds"
+  | "Sweeteners"
+  | "Beverages"
+  | "Spreads";
 
 export interface Ingredient {
   id: string;

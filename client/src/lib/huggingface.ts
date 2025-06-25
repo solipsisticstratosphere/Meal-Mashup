@@ -360,3 +360,59 @@ function generateFallbackRecipe(
       | "Hard",
   };
 }
+
+// Нова функція для генерації зображень рецептів з використанням fal-ai
+// ПРИМІТКА: Функціональність тимчасово відключена
+// Можна реалізувати в майбутньому, використовуючи fal-ai API
+
+/*
+export const generateRecipeImage = async (recipeTitle: string): Promise<string | null> => {
+  try {
+    // Отримання API ключа
+    const apiKey = process.env.FAL_KEY || process.env.NEXT_PUBLIC_FAL_API_KEY;
+
+    if (!apiKey) {
+      console.error("Missing fal.ai API key");
+      throw new Error("Missing API key");
+    }
+
+    // Імпорт fal з @fal-ai/client
+    const { fal } = await import("@fal-ai/client");
+    
+    // Налаштування клієнта
+    fal.config({
+      credentials: apiKey
+    });
+
+    const prompt = `A professional food photography image of ${recipeTitle}, high quality, realistic, appetizing, on a plate, restaurant presentation, food styling, soft lighting, 4k, detailed`;
+    
+    console.log(`Generating image for recipe: ${recipeTitle} using fal.ai`);
+    
+    const result = await fal.subscribe("fal-ai/flux/dev", {
+      input: {
+        prompt: prompt,
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS" && update.logs) {
+          update.logs.forEach(log => console.log(log.message));
+        }
+      },
+    });
+
+    console.log("Fal.ai image generation result:", result);
+
+    if (result && result.images && result.images.length > 0) {
+      return result.images[0].url;
+    } else if (result.data && result.data.images && result.data.images.length > 0) {
+      return result.data.images[0].url;
+    } else {
+      console.error("No image data in the response");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error generating recipe image:", error);
+    return null;
+  }
+};
+*/

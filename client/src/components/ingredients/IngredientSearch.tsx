@@ -43,6 +43,15 @@ export default function IngredientSearch({
     "Condiment",
     "Other",
     "Protein",
+    "Seafood",
+    "Legumes",
+    "Bakery",
+    "Baking",
+    "Nuts",
+    "Seeds",
+    "Sweeteners",
+    "Beverages",
+    "Spreads",
   ];
 
   const categoryEmojis: Record<IngredientCategory, string> = {
@@ -57,6 +66,15 @@ export default function IngredientSearch({
     Condiment: "🍯",
     Other: "📦",
     Protein: "🥚",
+    Seafood: "🦐",
+    Legumes: "🌱",
+    Bakery: "🥖",
+    Baking: "🧁",
+    Nuts: "🥜",
+    Seeds: "🌰",
+    Sweeteners: "🍯",
+    Beverages: "🥤",
+    Spreads: "🧈",
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -309,7 +327,7 @@ export default function IngredientSearch({
         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
         variants={containerVariants}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {data?.ingredients?.length === 0 &&
           (searchTerm || selectedCategory) ? (
             <motion.div

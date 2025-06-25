@@ -47,6 +47,15 @@ export default function IngredientCard({
       Herbs: "bg-emerald-100 text-emerald-800 border border-emerald-200",
       Oil: "bg-yellow-100 text-yellow-800 border border-yellow-200",
       Condiment: "bg-pink-100 text-pink-800 border border-pink-200",
+      Seafood: "bg-cyan-100 text-cyan-800 border border-cyan-200",
+      Legumes: "bg-lime-100 text-lime-800 border border-lime-200",
+      Bakery: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+      Baking: "bg-rose-100 text-rose-800 border border-rose-200",
+      Nuts: "bg-amber-100 text-amber-800 border border-amber-200",
+      Seeds: "bg-lime-100 text-lime-800 border border-lime-200",
+      Sweeteners: "bg-pink-100 text-pink-800 border border-pink-200",
+      Beverages: "bg-blue-100 text-blue-800 border border-blue-200",
+      Spreads: "bg-yellow-100 text-yellow-800 border border-yellow-200",
       Other: "bg-indigo-100 text-indigo-800 border border-indigo-200",
     };
 

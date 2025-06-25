@@ -25,17 +25,26 @@ export default function RouletteWheel({
   const colorIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const categoryColors: Record<IngredientCategory, string> = {
-    Meat: "#FF4D4D", // Bright red
-    Vegetables: "#22C55E", // Vibrant green
-    Fruit: "#F59E0B", // Bright amber
-    Grains: "#3B82F6", // Bright blue
-    Dairy: "#A855F7", // Bright purple
-    Spices: "#F97316", // Bright orange
-    Herbs: "#10B981", // Bright emerald
-    Oil: "#FACC15", // Bright yellow
-    Condiment: "#EC4899", // Bright pink
-    Other: "#6366F1", // Bright indigo
-    Protein: "#FF6B6B", // Another red shade
+    Meat: "#FF4D4D", // Ярко-красный
+    Vegetables: "#22C55E", // Яркий зеленый
+    Fruit: "#F59E0B", // Яркий янтарный (оранжево-желтый)
+    Grains: "#3B82F6", // Яркий синий
+    Dairy: "#A855F7", // Яркий фиолетовый
+    Spices: "#F97316", // Яркий оранжевый
+    Herbs: "#10B981", // Яркий изумрудный (зелено-бирюзовый)
+    Oil: "#FACC15", // Яркий желтый
+    Condiment: "#EC4899", // Яркий розовый
+    Other: "#6366F1", // Яркий индиго
+    Protein: "#06B6D4", // Яркий циан
+    Seafood: "#38BDF8", // Небесно-голубой
+    Legumes: "#84CC16", // Лаймовый / Ярко-салатовый (землистый, но яркий)
+    Bakery: "#A16207", // Теплый коричневый / Охра
+    Baking: "#FDBA74", // Светло-персиковый / Абрикосовый
+    Nuts: "#CA8A04", // Золотисто-коричневый
+    Seeds: "#78716C", // Серо-коричневый / Каменный
+    Sweeteners: "#FBCFE8", // Нежно-розовый / Пастельный
+    Beverages: "#4F46E5", // Глубокий индиго / Умеренно-фиолетовый
+    Spreads: "#D946EF", // Яркая фуксия / Малиновый
   };
 
   const uniqueCategories = Array.from(
@@ -51,14 +60,25 @@ export default function RouletteWheel({
     ingredients.length > 0
       ? ingredients
       : [
-          { name: "Meat", color: "#FF4D4D" },
-          { name: "Vegetables", color: "#22C55E" },
-          { name: "Fruit", color: "#F59E0B" },
-          { name: "Grains", color: "#3B82F6" },
-          { name: "Dairy", color: "#A855F7" },
-          { name: "Spices", color: "#F97316" },
-          { name: "Herbs", color: "#10B981" },
-          { name: "Oil", color: "#FACC15" },
+          { name: "Meat", color: categoryColors.Meat },
+          { name: "Vegetables", color: categoryColors.Vegetables },
+          { name: "Fruit", color: categoryColors.Fruit },
+          { name: "Grains", color: categoryColors.Grains },
+          { name: "Dairy", color: categoryColors.Dairy },
+          { name: "Spices", color: categoryColors.Spices },
+          { name: "Herbs", color: categoryColors.Herbs },
+          { name: "Oil", color: categoryColors.Oil },
+          { name: "Condiment", color: categoryColors.Condiment },
+          { name: "Protein", color: categoryColors.Protein },
+          { name: "Seafood", color: categoryColors.Seafood },
+          { name: "Legumes", color: categoryColors.Legumes },
+          { name: "Bakery", color: categoryColors.Bakery },
+          { name: "Baking", color: categoryColors.Baking },
+          { name: "Nuts", color: categoryColors.Nuts },
+          { name: "Seeds", color: categoryColors.Seeds },
+          { name: "Sweeteners", color: categoryColors.Sweeteners },
+          { name: "Beverages", color: categoryColors.Beverages },
+          { name: "Spreads", color: categoryColors.Spreads },
         ];
 
   useEffect(() => {

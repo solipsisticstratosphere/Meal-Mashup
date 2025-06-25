@@ -8,6 +8,7 @@ import DropArea from "@/components/ingredients/DropArea";
 import Button from "@/components/ui/Button";
 import RouletteWheel from "@/components/recipe/RouletteWheel";
 import RecipeCard from "@/components/recipe/RecipeCard";
+// import RecipeImageGenerator from "@/components/recipe/RecipeImageGenerator";
 import { useRecipeStore } from "@/store/recipeStore";
 import { useMutation } from "@apollo/client";
 import { GENERATE_RECIPE } from "@/lib/graphql";
@@ -290,6 +291,20 @@ export default function CreateRecipePage() {
     setFlyingComplete(false);
   };
 
+  // Функция обработки сгенерированного изображения
+  // ПРИМІТКА: Функціональність тимчасово відключена
+  // Можна реалізувати в майбутньому, використовуючи fal-ai API
+  /*
+  const handleImageGenerated = (imageUrl: string) => {
+    if (currentRecipe) {
+      setCurrentRecipe({
+        ...currentRecipe,
+        image_url: imageUrl,
+      });
+    }
+  };
+  */
+
   const handleRemoveIngredient = (id: string) => {
     removeIngredient(id);
   };
@@ -506,9 +521,19 @@ export default function CreateRecipePage() {
             </Button>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <RecipeCard recipe={currentRecipe} />
-          </div>
+          {/* <div className="bg-white rounded-2xl shadow-xl overflow-hidden"> */}
+          {/* Секция генерации изображений для рецепта */}
+          {/* ПРИМІТКА: Функціональність тимчасово відключена */}
+          {/* Можна реалізувати в майбутньому, використовуючи fal-ai API */}
+          {/* {!currentRecipe.image_url && (
+              <div className="p-6 border-b border-gray-100">
+                <h3 className="text-xl font-semibold mb-4 text-amber-700">
+                  Генерація зображень для рецепту
+                </h3>
+                <RecipeImageGenerator />
+              </div>
+            )} */}
+          <RecipeCard recipe={currentRecipe} />
         </div>
       )}
 
@@ -589,6 +614,15 @@ const FlyingIngredient = ({
       Herbs: "bg-emerald-100 text-emerald-800",
       Oil: "bg-amber-100 text-amber-800",
       Condiment: "bg-pink-100 text-pink-800",
+      Seafood: "bg-cyan-100 text-cyan-800",
+      Legumes: "bg-lime-100 text-lime-800",
+      Bakery: "bg-yellow-100 text-yellow-800",
+      Baking: "bg-rose-100 text-rose-800",
+      Nuts: "bg-amber-100 text-amber-800",
+      Seeds: "bg-lime-100 text-lime-800",
+      Sweeteners: "bg-pink-100 text-pink-800",
+      Beverages: "bg-blue-100 text-blue-800",
+      Spreads: "bg-yellow-100 text-yellow-800",
       Other: "bg-gray-100 text-gray-800",
     };
 
