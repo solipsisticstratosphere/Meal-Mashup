@@ -118,6 +118,7 @@ export default function PopularRecipesPage() {
     selectedCategory,
   ]);
 
+  // When multiple ingredients are selected, we want recipes that contain ALL of these ingredients
   const { data, loading, error, fetchMore, refetch } = useQuery(
     GET_POPULAR_RECIPES,
     {
@@ -129,7 +130,7 @@ export default function PopularRecipesPage() {
         maxPrepTime: maxPrepTime ?? undefined,
         minRating: minRating ?? undefined,
         ingredients:
-          selectedIngredients.map((i) => i.id).length > 0
+          selectedIngredients.length > 0
             ? selectedIngredients.map((i) => i.id)
             : undefined,
       },
@@ -166,6 +167,7 @@ export default function PopularRecipesPage() {
     setSuppressSkeleton(suppress);
 
     try {
+      // Ensure all selected ingredients are required in the recipe results
       const { data: fetchMoreData } = await fetchMore({
         variables: {
           offset: allRecipes.length,
@@ -175,7 +177,7 @@ export default function PopularRecipesPage() {
           maxPrepTime: maxPrepTime ?? undefined,
           minRating: minRating ?? undefined,
           ingredients:
-            selectedIngredients.map((i) => i.id).length > 0
+            selectedIngredients.length > 0
               ? selectedIngredients.map((i) => i.id)
               : undefined,
         },
@@ -598,6 +600,11 @@ w-full sm:w-full md:w-auto
                         onChange={setSelectedIngredients}
                         category={selectedCategory}
                       />
+                      {selectedIngredients.length > 1 && (
+                        <div className="px-3 py-1 text-xs text-amber-700 bg-amber-50 border-t border-gray-200">
+                          Showing recipes with ALL selected ingredients
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -146,7 +146,7 @@ export default function IngredientMultiSelect({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-sm"
+              className="flex items-center gap-1.5 px-2 py-1 mb-2 bg-amber-100 text-amber-800 rounded-full text-sm"
             >
               <span>{ing.name}</span>
               <button onClick={() => handleRemove(ing.id)}>

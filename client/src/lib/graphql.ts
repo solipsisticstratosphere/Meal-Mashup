@@ -19,7 +19,7 @@ export const GET_POPULAR_RECIPES = gql`
     $difficulty: [String]
     $maxPrepTime: Int
     $minRating: Float
-    $ingredients: [ID!]
+    $ingredients: [ID!] # When multiple IDs are provided, recipes must contain ALL these ingredients (AND logic)
   ) {
     popularRecipes(
       limit: $limit
@@ -122,7 +122,7 @@ export const GENERATE_RECIPE = gql`
     generateRecipe(ingredients: $ingredients) {
       id
       title
-      # ... все остальные поля из вашего RecipeCard ...
+
       ingredients {
         ingredient {
           id
