@@ -583,6 +583,7 @@ const FlyingIngredient = ({
   onComplete,
 }: FlyingIngredientProps) => {
   const controls = useAnimation();
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     controls
@@ -644,26 +645,55 @@ const FlyingIngredient = ({
         className="border rounded-lg shadow-md bg-white overflow-hidden"
         style={{ width: `${width}px`, height: `${height}px` }}
       >
-        <div className="relative h-28 w-full">
-          <Image
-            src={ingredient.image_url || "/placeholder-image.jpg"}
-            alt={ingredient.name}
-            className="absolute inset-0 w-full h-full object-cover"
-            width={width}
-            height={height}
-          />
+        <div className="relative h-28 w-full bg-gradient-to-br from-gray-100 to-gray-200">
+          {ingredient.image_url && !imageError ? (
+            <Image
+              src={ingredient.image_url}
+              alt={ingredient.name}
+              className="absolute inset-0 w-full h-full object-cover"
+              width={width}
+              height={height}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.onerror = null;
+                setImageError(true);
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-8 h-8 mx-auto text-gray-400"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                  />
+                </svg>
+                <p className="text-xs text-gray-500 mt-1">No image</p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="p-3">
-          <h3 className="font-medium text-gray-900 mb-1 text-sm">
+          <h3 className="font-medium text-gray-900 mb-1 text-sm truncate">
             {ingredient.name}
           </h3>
-          <span
-            className={`inline-block px-2 py-1 text-xs rounded-full ${getCategoryColor(
-              ingredient.category
-            )}`}
-          >
-            {ingredient.category}
-          </span>
+          <div className="flex justify-start w-full overflow-hidden">
+            <span
+              className={`inline-flex items-center px-2 py-1 text-xs rounded-full max-w-full ${getCategoryColor(
+                ingredient.category
+              )}`}
+            >
+              <span className="truncate">{ingredient.category}</span>
+            </span>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -5,6 +5,9 @@ import Image from "next/image";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { twMerge } from "tailwind-merge";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ImageIcon } from "lucide-react";
 
 interface IngredientCardProps {
   ingredient: Ingredient;
@@ -23,6 +26,9 @@ export default function IngredientCard({
   className,
   id,
 }: IngredientCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: ingredient.id,
@@ -64,6 +70,10 @@ export default function IngredientCard({
     );
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -78,29 +88,45 @@ export default function IngredientCard({
       )}
       onClick={onClick}
       id={id}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onFocus={() => setShowTooltip(true)}
+      onBlur={() => setShowTooltip(false)}
+      aria-describedby={`tooltip-${ingredient.id}`}
     >
-      <div className="relative h-28 w-full">
-        <Image
-          src={
-            ingredient.image_url ||
-            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YxZjFmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5JbWFnZTwvdGV4dD48L3N2Zz4="
-          }
-          alt={ingredient.name}
-          fill
-          sizes="(max-width: 768px) 100vw, 200px"
-          className="object-cover"
-        />
+      <div className="relative h-28 w-full bg-gradient-to-br from-gray-100 to-gray-200">
+        {!imageError && ingredient.image_url ? (
+          <Image
+            src={ingredient.image_url}
+            alt={ingredient.name}
+            fill
+            sizes="(max-width: 768px) 100vw, 200px"
+            className="object-cover"
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <ImageIcon className="h-8 w-8 mx-auto text-gray-400" />
+              <p className="text-xs text-gray-500 mt-1">No image</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 mb-1">{ingredient.name}</h3>
-        <span
-          className={`inline-block px-2 py-1 text-xs rounded-full ${getCategoryColor(
-            ingredient.category
-          )}`}
-        >
-          {ingredient.category}
-        </span>
+        <h3 className="font-medium text-gray-900 mb-1 truncate">
+          {ingredient.name}
+        </h3>
+        <div className="flex justify-start w-full overflow-hidden">
+          <span
+            className={`inline-flex items-center px-2 py-1 text-xs rounded-full max-w-full ${getCategoryColor(
+              ingredient.category
+            )}`}
+          >
+            <span className="truncate">{ingredient.category}</span>
+          </span>
+        </div>
       </div>
 
       {!dragDisabled && (
@@ -121,6 +147,57 @@ export default function IngredientCard({
           </svg>
         </div>
       )}
+
+      <AnimatePresence>
+        {showTooltip && !isDragging && (
+          <motion.div
+            id={`tooltip-${ingredient.id}`}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative h-40 w-full bg-gradient-to-br from-gray-100 to-gray-200">
+              {!imageError && ingredient.image_url ? (
+                <Image
+                  src={ingredient.image_url}
+                  alt={ingredient.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 256px"
+                  className="object-cover"
+                  onError={handleImageError}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <ImageIcon className="h-10 w-10 mx-auto text-gray-400" />
+                    <p className="text-sm text-gray-500 mt-2">
+                      No image available
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="font-medium text-gray-900 text-lg mb-1">
+                {ingredient.name}
+              </h3>
+              <div className="flex justify-start w-full overflow-hidden">
+                <span
+                  className={`inline-flex items-center px-2 py-1 text-xs rounded-full max-w-full ${getCategoryColor(
+                    ingredient.category
+                  )}`}
+                >
+                  <span className="truncate">{ingredient.category}</span>
+                </span>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-3 h-3 bg-white border-r border-b border-gray-100"></div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

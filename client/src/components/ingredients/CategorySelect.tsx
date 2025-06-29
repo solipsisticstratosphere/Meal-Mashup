@@ -47,7 +47,7 @@ const categoryEmojis: Record<IngredientCategory, string> = {
   Other: "📦",
   Protein: "🥚",
   Seafood: "🦐",
-  Legumes: "🫘",
+  Legumes: "🌱",
   Bakery: "🥖",
   Baking: "🧁",
   Nuts: "🥜",

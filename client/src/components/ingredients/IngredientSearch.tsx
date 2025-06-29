@@ -22,6 +22,9 @@ export default function IngredientSearch({
     IngredientCategory | ""
   >("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [tooltipIngredient, setTooltipIngredient] = useState<Ingredient | null>(
+    null
+  );
 
   const { data, loading, error } = useQuery(GET_INGREDIENTS, {
     variables: {
@@ -92,6 +95,33 @@ export default function IngredientSearch({
   const clearCategory = () => {
     setSelectedCategory("");
     setIsDropdownOpen(false);
+  };
+
+  const getCategoryColor = (category: string): string => {
+    const colors: Record<string, string> = {
+      Meat: "bg-red-100 text-red-800",
+      Protein: "bg-red-100 text-red-800",
+      Vegetables: "bg-green-100 text-green-800",
+      Fruit: "bg-amber-100 text-amber-800",
+      Grains: "bg-yellow-100 text-yellow-800",
+      Dairy: "bg-blue-100 text-blue-800",
+      Spices: "bg-orange-100 text-orange-800",
+      Herbs: "bg-emerald-100 text-emerald-800",
+      Oil: "bg-amber-100 text-amber-800",
+      Condiment: "bg-pink-100 text-pink-800",
+      Seafood: "bg-cyan-100 text-cyan-800",
+      Legumes: "bg-lime-100 text-lime-800",
+      Bakery: "bg-yellow-100 text-yellow-800",
+      Baking: "bg-rose-100 text-rose-800",
+      Nuts: "bg-amber-100 text-amber-800",
+      Seeds: "bg-lime-100 text-lime-800",
+      Sweeteners: "bg-pink-100 text-pink-800",
+      Beverages: "bg-blue-100 text-blue-800",
+      Spreads: "bg-yellow-100 text-yellow-800",
+      Other: "bg-gray-100 text-gray-800",
+    };
+
+    return colors[category] || "bg-gray-100 text-gray-800";
   };
 
   const containerVariants = {
@@ -365,75 +395,117 @@ export default function IngredientSearch({
                 className="group relative p-3 bg-white rounded-2xl border-2 border-gray-100 shadow-sm 
                   hover:shadow-lg hover:border-amber-200 
                   focus:ring-4 focus:ring-amber-100 focus:border-amber-400 focus:outline-none
-                  transition-all duration-300 ease-out cursor-pointer
-                  active:scale-95"
+                  transition-all duration-300 ease-out cursor-pointer"
                 tabIndex={0}
                 role="button"
                 aria-label={`Select ${ingredient.name}`}
-                whileHover={{
-                  y: -4,
-                  transition: { duration: 0.2 },
-                }}
-                whileTap={{ scale: 0.95 }}
+                onMouseEnter={() => setTooltipIngredient(ingredient)}
+                onMouseLeave={() => setTooltipIngredient(null)}
+                onFocus={() => setTooltipIngredient(ingredient)}
+                onBlur={() => setTooltipIngredient(null)}
+                aria-describedby={`tooltip-${ingredient.id}`}
               >
                 {/* Image Container */}
                 <div className="relative h-20 sm:h-24 mb-3 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden">
                   {ingredient.image_url ? (
-                    <motion.img
+                    <img
                       src={ingredient.image_url}
                       alt={ingredient.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src =
+                          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YxZjFmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+                      }}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 group-hover:text-gray-500 transition-colors">
-                      <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                      <div className="text-center">
+                        <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 mx-auto" />
+                        <p className="text-xs text-gray-500 mt-1">No image</p>
+                      </div>
                     </div>
                   )}
-
-                  {/* Hover Overlay */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
-                  />
                 </div>
 
                 {/* Content */}
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate group-hover:text-amber-700 transition-colors">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
                     {ingredient.name}
                   </h3>
 
-                  <motion.div
-                    className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors text-xs font-medium text-gray-600 group-hover:text-amber-700"
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    <span className="text-xs">
-                      {categoryEmojis[ingredient.category]}
-                    </span>
-                    <span className="truncate">{ingredient.category}</span>
-                  </motion.div>
+                  <div className="w-full overflow-hidden">
+                    <div
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium max-w-full ${getCategoryColor(ingredient.category)}`}
+                    >
+                      <span className="text-xs flex-shrink-0">
+                        {categoryEmojis[ingredient.category]}
+                      </span>
+                      <span className="truncate">{ingredient.category}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Selection Indicator */}
-                <motion.div
-                  className="absolute top-2 right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  initial={{ scale: 0 }}
-                  whileHover={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
-                  <motion.div
-                    className="w-2 h-2 bg-white rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{
-                      duration: 1,
-                      repeat: Number.POSITIVE_INFINITY,
-                    }}
-                  />
-                </motion.div>
+                {/* Tooltip */}
+                <AnimatePresence>
+                  {tooltipIngredient?.id === ingredient.id && (
+                    <motion.div
+                      id={`tooltip-${ingredient.id}`}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="relative h-40 w-full bg-gradient-to-br from-gray-100 to-gray-200">
+                        {ingredient.image_url ? (
+                          <img
+                            src={ingredient.image_url}
+                            alt={ingredient.name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              target.src =
+                                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YxZjFmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center">
+                              <ImageIcon className="h-10 w-10 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-500 mt-2">
+                                No image available
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-medium text-gray-900 text-lg mb-1">
+                          {ingredient.name}
+                        </h3>
+                        <div className="w-full overflow-hidden">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full max-w-full ${getCategoryColor(
+                              ingredient.category
+                            )}`}
+                          >
+                            <span className="text-xs flex-shrink-0">
+                              {categoryEmojis[ingredient.category]}
+                            </span>
+                            <span className="truncate">
+                              {ingredient.category}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-3 h-3 bg-white border-r border-b border-gray-100"></div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))
           )}
