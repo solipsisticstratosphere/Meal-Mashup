@@ -11,9 +11,10 @@ import {
 import Button from "@/components/ui/Button";
 import { Recipe, RecipeIngredient } from "@/lib/types";
 import { toast } from "sonner";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, ImageIcon, Upload, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import IngredientManager from "@/components/recipe/IngredientManager";
+import ImageModal from "@/components/ui/ImageModal";
 
 interface EditableRecipe {
   title: string;
@@ -30,6 +31,7 @@ interface EditableRecipe {
       unit_of_measure: string;
     };
   }[];
+  image_url?: string | null;
 }
 
 export default function EditRecipePage() {
@@ -45,8 +47,11 @@ export default function EditRecipePage() {
     preparationTime: 0,
     difficulty: "Medium",
     ingredients: [],
+    image_url: null,
   });
 
+  const [imageError, setImageError] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: recipeData, loading: recipeLoading } = useQuery(GET_RECIPE, {
@@ -60,12 +65,16 @@ export default function EditRecipePage() {
   useEffect(() => {
     if (recipeData?.recipe) {
       const recipe = recipeData.recipe as Recipe;
+      console.log("Recipe data from API:", recipe);
+      console.log("Image URL from API:", recipe.image_url);
+
       setFormData({
         title: recipe.title || "",
         description: recipe.description || "",
         cookingMethod: recipe.cookingMethod || "",
         preparationTime: recipe.preparationTime || 0,
         difficulty: recipe.difficulty || "Medium",
+        image_url: recipe.image_url,
         ingredients: (recipe.ingredients || []).map(
           (item: RecipeIngredient) => ({
             ingredientId: item.ingredient.id,
@@ -106,12 +115,168 @@ export default function EditRecipePage() {
     setFormData((prev) => ({ ...prev, ingredients }));
   };
 
+  const handleImageUpload = async () => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+
+    if (!cloudName || !apiKey) {
+      toast.error("Cloudinary configuration is missing");
+      return;
+    }
+
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      setIsUploading(true);
+
+      try {
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        const uniqueId = `recipe_${recipeId}_${timestamp}`;
+
+        const paramsToSign = {
+          timestamp: timestamp,
+          folder: "recipes",
+          public_id: uniqueId,
+        };
+
+        const signResponse = await fetch("/api/cloudinary/sign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ paramsToSign }),
+        });
+
+        if (!signResponse.ok) {
+          throw new Error("Failed to get signature");
+        }
+
+        const { signature } = await signResponse.json();
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", timestamp.toString());
+        formData.append("signature", signature);
+        formData.append("folder", "recipes");
+        formData.append("public_id", uniqueId);
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const data = await uploadResponse.json();
+
+        if (data.secure_url) {
+          setFormData((prev) => ({
+            ...prev,
+            image_url: data.secure_url,
+          }));
+          toast.success("Image uploaded successfully!");
+          setImageError(false);
+        } else {
+          toast.error("Upload failed");
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast.error("Failed to upload image");
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    input.click();
+  };
+
+  const handleImageDelete = async () => {
+    try {
+      setIsSubmitting(true);
+      console.log("Deleting image, current form data:", formData);
+
+      if (formData.image_url) {
+        const imageUrl = formData.image_url;
+        const urlParts = imageUrl.split("/");
+        const publicIdParts = urlParts.slice(-2);
+        const publicId = publicIdParts.join("/").split(".")[0];
+
+        console.log("Attempting to delete image with public ID:", publicId);
+
+        try {
+          const deleteResponse = await fetch("/api/cloudinary/delete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ publicId }),
+          });
+
+          const deleteResult = await deleteResponse.json();
+          console.log("Cloudinary delete response:", deleteResult);
+
+          if (!deleteResponse.ok) {
+            console.warn(
+              "Failed to delete image from Cloudinary storage, but will continue updating recipe"
+            );
+          }
+        } catch (cloudinaryError) {
+          console.error("Error deleting from Cloudinary:", cloudinaryError);
+        }
+      }
+
+      const updatePayload = {
+        title: formData.title,
+        description: formData.description,
+        instructions: formData.cookingMethod,
+        prep_time_minutes: parseInt(formData.preparationTime.toString()),
+        difficulty: formData.difficulty,
+        image_url: null,
+      };
+
+      console.log("Delete image payload:", updatePayload);
+
+      const { data: recipeData } = await updateRecipe({
+        variables: {
+          id: recipeId,
+          recipe: updatePayload,
+        },
+      });
+
+      console.log("Delete image response:", recipeData);
+
+      if (recipeData?.updateRecipe?.id) {
+        setFormData((prev) => ({
+          ...prev,
+          image_url: null,
+        }));
+        toast.success("Recipe image removed successfully!");
+      } else {
+        toast.error("Failed to remove recipe image");
+      }
+    } catch (error) {
+      console.error("Error removing image:", error);
+      console.error("Detailed error:", JSON.stringify(error, null, 2));
+      toast.error("Failed to remove image");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    console.log("Submitting with form data:", formData);
 
     try {
-      // Update recipe details
       const { data: recipeData } = await updateRecipe({
         variables: {
           id: recipeId,
@@ -121,13 +286,15 @@ export default function EditRecipePage() {
             instructions: formData.cookingMethod,
             prep_time_minutes: parseInt(formData.preparationTime.toString()),
             difficulty: formData.difficulty,
+            image_url: formData.image_url,
           },
         },
       });
 
+      console.log("Update response:", recipeData);
+
       let ingredientsUpdated = true;
 
-      // Update recipe ingredients if there are any
       if (formData.ingredients.length > 0) {
         try {
           const ingredientData = formData.ingredients.map((item) => ({
@@ -198,6 +365,55 @@ export default function EditRecipePage() {
         className="bg-white rounded-xl shadow-lg p-6 md:p-8"
       >
         <div className="grid gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Recipe Image
+            </label>
+            <div className="border rounded-xl overflow-hidden mb-4">
+              <div className="relative h-64 w-full">
+                {formData.image_url && !imageError ? (
+                  <ImageModal
+                    imageUrl={formData.image_url}
+                    altText={formData.title || "Recipe image"}
+                  />
+                ) : (
+                  <div className="bg-gray-100 h-full w-full flex items-center justify-center">
+                    <ImageIcon className="h-12 w-12 text-gray-400" />
+                    <p className="text-gray-500 ml-2">No image uploaded</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={handleImageUpload}
+                variant="outline"
+                disabled={isUploading}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {isUploading
+                  ? "Uploading..."
+                  : formData.image_url
+                    ? "Change Image"
+                    : "Upload Image"}
+              </Button>
+
+              {formData.image_url && (
+                <Button
+                  type="button"
+                  onClick={handleImageDelete}
+                  variant="outline"
+                  className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border-red-200 hover:border-red-300"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Image
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="title"

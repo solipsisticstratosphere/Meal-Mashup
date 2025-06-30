@@ -63,6 +63,7 @@ export const GET_RECIPE = gql`
       id
       title
       description
+      image_url
       ingredients {
         ingredient {
           id

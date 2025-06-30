@@ -23,7 +23,6 @@ import {
   X,
   Utensils,
 } from "lucide-react";
-import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
@@ -35,6 +34,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { usePathname, useRouter } from "next/navigation";
+import ImageModal from "@/components/ui/ImageModal";
 
 const styles = StyleSheet.create({
   page: {
@@ -157,7 +157,6 @@ export default function RecipeCard({
   const { voteRecipe: storeVote, votedRecipes } = useRecipeStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isPdfOpen, setIsPdfOpen] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState<
     "like" | "dislike" | null
   >(recipe.userVote || null);
@@ -556,20 +555,17 @@ export default function RecipeCard({
       className={`bg-white rounded-xl shadow-md overflow-hidden ${className}`}
     >
       <div className="relative h-48 md:h-64 overflow-hidden">
-        {recipe.image_url && !imageError ? (
-          <Image
-            src={recipe.image_url}
-            alt={recipe.title}
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-            onError={() => setImageError(true)}
+        {recipe.image_url ? (
+          <ImageModal
+            imageUrl={recipe.image_url}
+            altText={recipe.title || "Recipe Image"}
           />
         ) : (
           <div
-            className={`w-full h-full bg-gradient-to-r ${backgroundGradient} flex items-center justify-center`}
+            className={`w-full h-full bg-gradient-to-r ${backgroundGradient} flex flex-col items-center justify-center`}
           >
             <Utensils className="w-16 h-16 text-white opacity-75" />
+            <p className="text-white mt-2 opacity-75">No image available</p>
           </div>
         )}
       </div>

@@ -59,16 +59,15 @@ export default function CreateRecipePage() {
     };
   }, []);
 
-  // Effect to display the recipe once animation completes and recipe is generated
   useEffect(() => {
     if (animationComplete && generatedRecipe) {
       console.log(
         "Animation completed and recipe generated - showing final recipe"
       );
-      // Добавляем задержку, чтобы пользователь мог увидеть финальное состояние котелка
+
       const delayTimer = setTimeout(() => {
         showFinalRecipe(generatedRecipe);
-      }, 3000); // Показываем готовый рецепт через 3 секунды после завершения анимации
+      }, 3000);
 
       return () => {
         clearTimeout(delayTimer);
@@ -233,13 +232,11 @@ export default function CreateRecipePage() {
       setFlyingComplete(true);
       setShowGenerationAnimation(true);
 
-      // Generate recipe but don't show it until animation completes
       generateRecipe();
     }, 1000);
   };
 
   const handleAnimationComplete = () => {
-    // This will be called when the RouletteWheel animation finishes
     console.log("Animation complete callback received");
     setAnimationComplete(true);
   };
@@ -287,7 +284,6 @@ export default function CreateRecipePage() {
       recipe = createFallbackRecipe();
     }
 
-    // Store the generated recipe, but don't show it until animation completes
     setGeneratedRecipe(recipe);
   };
 
@@ -319,7 +315,7 @@ export default function CreateRecipePage() {
     setGeneratedRecipe(null);
   };
 
-  // Функция обработки сгенерированного изображения
+  //
   // ПРИМІТКА: Функціональність тимчасово відключена
   // Можна реалізувати в майбутньому, використовуючи fal-ai API
   /*
@@ -550,7 +546,7 @@ export default function CreateRecipePage() {
           </div>
 
           {/* <div className="bg-white rounded-2xl shadow-xl overflow-hidden"> */}
-          {/* Секция генерации изображений для рецепта */}
+          {/*  */}
           {/* ПРИМІТКА: Функціональність тимчасово відключена */}
           {/* Можна реалізувати в майбутньому, використовуючи fal-ai API */}
           {/* {!currentRecipe.image_url && (

@@ -35,8 +35,12 @@ const nextConfig = {
         protocol: "https",
         hostname: "api-inference.huggingface.co",
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
       // Закомментировано, так как функциональность генерации изображений отключена
-      // ПРИМІТКА: Розкоментуйте цей блок при реалізації генерації зображень через fal.ai
+      // ПРИМІТКА:  fal.ai
       /*
       {
         protocol: "https",
