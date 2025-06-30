@@ -20,6 +20,8 @@ import {
   Utensils,
   BookmarkCheck,
 } from "lucide-react";
+// Import motion and AnimatePresence
+import { motion, AnimatePresence } from "framer-motion";
 
 interface RecipeCardCompactProps {
   recipe: Recipe;
@@ -113,52 +115,67 @@ export default function RecipeCardCompact({
       return;
     }
 
+    const oldVote = currentUserVote;
+    const oldLikes = currentLikes;
+    const oldDislikes = currentDislikes;
+
     try {
-      const voteToSend = currentUserVote === vote ? null : vote;
-      const oldVote = currentUserVote;
+      const isUnvote = currentUserVote === vote;
+      const voteToSend = isUnvote ? "UNVOTE" : vote.toUpperCase();
 
-      if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
-      if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
-      if (voteToSend === "like") setCurrentLikes((prev) => prev + 1);
-      if (voteToSend === "dislike") setCurrentDislikes((prev) => prev + 1);
+      if (isUnvote) {
+        if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+        if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+        setCurrentUserVote(null);
+      } else {
+        if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+        if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
 
-      setCurrentUserVote(voteToSend);
+        if (vote === "like") setCurrentLikes((prev) => prev + 1);
+        if (vote === "dislike") setCurrentDislikes((prev) => prev + 1);
+        setCurrentUserVote(vote);
+      }
+
       setTotalVotes(currentLikes - currentDislikes);
-
-      storeVote(recipe.id, voteToSend as VoteType);
+      storeVote(recipe.id, isUnvote ? null : vote);
 
       const { data } = await voteRecipeMutation({
-        variables: { recipeId: recipe.id, vote: voteToSend },
+        variables: {
+          recipeId: recipe.id,
+          vote: voteToSend,
+        },
       });
 
       if (data?.voteRecipe) {
-        if (data.voteRecipe.userVote !== voteToSend) {
-          setCurrentUserVote(data.voteRecipe.userVote || null);
-          storeVote(recipe.id, data.voteRecipe.userVote);
+        const serverUserVote = data.voteRecipe.userVote;
+        const serverLikes = data.voteRecipe.likes;
+        const serverDislikes = data.voteRecipe.dislikes;
+
+        setCurrentUserVote(serverUserVote);
+        storeVote(recipe.id, serverUserVote);
+
+        if (serverLikes !== undefined) {
+          setCurrentLikes(serverLikes);
         }
 
-        if (data.voteRecipe.likes !== undefined) {
-          setCurrentLikes(data.voteRecipe.likes);
-        }
-
-        if (data.voteRecipe.dislikes !== undefined) {
-          setCurrentDislikes(data.voteRecipe.dislikes);
+        if (serverDislikes !== undefined) {
+          setCurrentDislikes(serverDislikes);
         }
 
         if (data.voteRecipe.votes !== undefined) {
           setTotalVotes(data.voteRecipe.votes);
         }
 
-        toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
+        toast.success(`${!isUnvote ? "Vote recorded" : "Vote removed"}`);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
       toast.error("Failed to record your vote");
 
-      setCurrentUserVote(votedRecipes[recipe.id] || recipe.userVote || null);
-      setCurrentLikes(recipe.likes || 0);
-      setCurrentDislikes(recipe.dislikes || 0);
-      setTotalVotes(recipe.votes || 0);
+      setCurrentUserVote(oldVote);
+      setCurrentLikes(oldLikes);
+      setCurrentDislikes(oldDislikes);
+      setTotalVotes(oldLikes - oldDislikes);
     }
   };
 
@@ -234,7 +251,6 @@ export default function RecipeCardCompact({
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden h-[450px] flex flex-col ${className}`}
     >
-      {/* Recipe Image or Gradient */}
       <div className="relative h-30 flex-shrink-0 overflow-hidden">
         {safeRecipe.image_url && !imageError ? (
           <Image
@@ -273,14 +289,12 @@ export default function RecipeCardCompact({
           >
             {safeRecipe.difficulty}
           </span>
-
           <span className="flex items-center text-xs text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
             <Clock className="w-3 h-3 mr-1" />
             {safeRecipe.preparationTime} min
           </span>
         </div>
 
-        {/* Show description only if NOT on my-recipes page */}
         {!isMyRecipesPage && safeRecipe.description && (
           <div className="mb-3 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400">
             <p className="text-slate-700 italic text-xs line-clamp-2">
@@ -369,12 +383,34 @@ export default function RecipeCardCompact({
                   : "bg-green-600 hover:bg-green-700 text-white"
               }
             >
-              {isSaved ? (
-                <BookmarkCheck className="w-4 h-4 mr-1" />
-              ) : (
-                <Bookmark className="w-4 h-4 mr-1" />
-              )}
-              {isSaved ? "Saved" : "Save"}
+              {/* FIX: Use AnimatePresence to animate a single child */}
+              <AnimatePresence mode="wait" initial={false}>
+                {isSaved ? (
+                  <motion.span
+                    key="saved"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center"
+                  >
+                    <BookmarkCheck className="w-4 h-4 mr-1" />
+                    Saved
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="save"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center"
+                  >
+                    <Bookmark className="w-4 h-4 mr-1" />
+                    Save
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </Button>
           </div>
 

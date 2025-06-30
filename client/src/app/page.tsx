@@ -125,6 +125,7 @@ export default function Home() {
                 title="Avocado Chocolate Mousse"
                 image="/img/choco.jpg"
                 tags={["Dessert", "Healthy", "Quick"]}
+                description="A delicious and healthy dessert that is perfect for a quick snack."
                 rating={4.8}
                 likes={12}
                 dislikes={1}
@@ -140,6 +141,7 @@ export default function Home() {
                 title="Pineapple Curry Stir-Fry"
                 image="/img/carrot.png"
                 tags={["Dinner", "Fusion", "Spicy"]}
+                description="Sweet, spicy, and packed with veggies — this curry is a delicious meal."
                 rating={4.5}
                 featured
                 likes={15}
@@ -156,6 +158,7 @@ export default function Home() {
                 title="Banana Bread Pancakes"
                 image="/img/pancakes.png"
                 tags={["Breakfast", "Sweet", "Easy"]}
+                description="A wholesome and hearty breakfast packed with banana flavor and natural goodness."
                 rating={4.7}
                 likes={10}
                 dislikes={0}
