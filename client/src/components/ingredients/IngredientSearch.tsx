@@ -2,13 +2,14 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@apollo/client";
 import { GET_INGREDIENTS } from "@/lib/graphql";
 import type { Ingredient, IngredientCategory } from "@/lib/types";
 import Loading from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronDown, Filter, X, ImageIcon } from "lucide-react";
+import { useIsMobile } from "@/hooks/useMobile";
 
 interface IngredientSearchProps {
   onSelectIngredient: (ingredient: Ingredient) => void;
@@ -25,6 +26,8 @@ export default function IngredientSearch({
   const [tooltipIngredient, setTooltipIngredient] = useState<Ingredient | null>(
     null
   );
+  const isMobile = useIsMobile();
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const { data, loading, error } = useQuery(GET_INGREDIENTS, {
     variables: {
@@ -33,6 +36,25 @@ export default function IngredientSearch({
     },
     skip: !searchTerm && !selectedCategory,
   });
+
+  useEffect(() => {
+    if (!isMobile || !tooltipIngredient) return;
+
+    const handleClickOutside = (event: Event) => {
+      const currentCard = cardRefs.current[tooltipIngredient.id];
+      if (currentCard && !currentCard.contains(event.target as Node)) {
+        setTooltipIngredient(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [tooltipIngredient, isMobile]);
 
   const categories: IngredientCategory[] = [
     "Meat",
@@ -85,7 +107,14 @@ export default function IngredientSearch({
   };
 
   const handleSelectIngredient = (ingredient: Ingredient) => {
-    onSelectIngredient(ingredient);
+    if (isMobile && tooltipIngredient?.id === ingredient.id) {
+      onSelectIngredient(ingredient);
+      setTooltipIngredient(null);
+    } else if (isMobile) {
+      setTooltipIngredient(ingredient);
+    } else {
+      onSelectIngredient(ingredient);
+    }
   };
 
   const clearSearch = () => {
@@ -145,6 +174,18 @@ export default function IngredientSearch({
         duration: 0.3,
       },
     },
+  };
+
+  const handleMouseEnter = (ingredient: Ingredient) => {
+    if (!isMobile) {
+      setTooltipIngredient(ingredient);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setTooltipIngredient(null);
+    }
   };
 
   return (
@@ -399,11 +440,14 @@ export default function IngredientSearch({
                 tabIndex={0}
                 role="button"
                 aria-label={`Select ${ingredient.name}`}
-                onMouseEnter={() => setTooltipIngredient(ingredient)}
-                onMouseLeave={() => setTooltipIngredient(null)}
-                onFocus={() => setTooltipIngredient(ingredient)}
-                onBlur={() => setTooltipIngredient(null)}
+                onMouseEnter={() => handleMouseEnter(ingredient)}
+                onMouseLeave={handleMouseLeave}
+                onFocus={() => handleMouseEnter(ingredient)}
+                onBlur={handleMouseLeave}
                 aria-describedby={`tooltip-${ingredient.id}`}
+                ref={(node) => {
+                  cardRefs.current[ingredient.id] = node;
+                }}
               >
                 {/* Image Container */}
                 <div className="relative h-20 sm:h-24 mb-3 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden">
@@ -447,6 +491,26 @@ export default function IngredientSearch({
                   </div>
                 </div>
 
+                {/* Mobile info indicator */}
+                {isMobile && (
+                  <div className="absolute right-2 bottom-2 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="white"
+                      className="w-3 h-3"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                      />
+                    </svg>
+                  </div>
+                )}
+
                 {/* Tooltip */}
                 <AnimatePresence>
                   {tooltipIngredient?.id === ingredient.id && (
@@ -456,8 +520,7 @@ export default function IngredientSearch({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95, y: 10 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden"
-                      onClick={(e) => e.stopPropagation()}
+                      className={`absolute z-50 ${isMobile ? "" : "pointer-events-none"} left-1/2 -translate-x-1/2 ${isMobile ? "top-full mt-2" : "bottom-full mb-2"} w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden`}
                     >
                       <div className="relative h-40 w-full bg-gradient-to-br from-gray-100 to-gray-200">
                         {ingredient.image_url ? (
@@ -502,7 +565,33 @@ export default function IngredientSearch({
                           </span>
                         </div>
                       </div>
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-3 h-3 bg-white border-r border-b border-gray-100"></div>
+                      <div
+                        className={`absolute ${isMobile ? "top-0" : "bottom-0"} left-1/2 -translate-x-1/2 ${isMobile ? "-translate-y-1/2" : "translate-y-1/2"} rotate-45 w-3 h-3 bg-white border-${isMobile ? "l border-t" : "r border-b"} border-gray-100`}
+                      ></div>
+
+                      {isMobile && (
+                        <div className="flex p-3 bg-gray-50 border-t border-gray-100 justify-between">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTooltipIngredient(null);
+                            }}
+                            className="px-3 py-1 text-sm text-gray-500 bg-white border border-gray-200 rounded-md hover:bg-gray-100"
+                          >
+                            Close
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectIngredient(ingredient);
+                              setTooltipIngredient(null);
+                            }}
+                            className="px-3 py-1 text-sm text-white bg-amber-500 rounded-md hover:bg-amber-600"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

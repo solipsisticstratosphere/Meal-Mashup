@@ -36,7 +36,7 @@ const Footer = () => {
   // ];
 
   return (
-    <footer className="w-full bg-white mt-auto">
+    <footer className="w-full  mt-auto">
       <div className="container mx-auto px-4 py-8">
         <div className="">
           <p className="text-sm text-slate-500 text-center">

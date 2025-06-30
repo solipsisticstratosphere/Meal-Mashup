@@ -12,7 +12,7 @@ export default function NotFound() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50 overflow-hidden">
+    <div className="relative min-h-screen bg-gradient-to-b from-slate-50 via-white to-rose-50 overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-br from-orange-200/30 to-rose-200/30 blur-3xl animate-pulse"></div>

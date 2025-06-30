@@ -6,7 +6,8 @@
 }
 
 body {
-  @apply bg-gradient-to-b from-rose-50 to-white;
+  background-color: #fff1f2;
+
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }

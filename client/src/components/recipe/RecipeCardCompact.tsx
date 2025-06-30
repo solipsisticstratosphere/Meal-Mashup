@@ -18,6 +18,7 @@ import {
   ChefHat,
   ArrowRight,
   Utensils,
+  BookmarkCheck,
 } from "lucide-react";
 
 interface RecipeCardCompactProps {
@@ -33,7 +34,9 @@ export default function RecipeCardCompact({
 }: RecipeCardCompactProps) {
   const {
     voteRecipe: storeVote,
-    saveRecipe: storeRecipe,
+    saveRecipe: storeSaveRecipe,
+    removeSavedRecipe: storeRemoveSavedRecipe,
+    savedRecipes,
     votedRecipes,
   } = useRecipeStore();
   const [isSaving, setIsSaving] = useState(false);
@@ -44,6 +47,7 @@ export default function RecipeCardCompact({
   const [currentLikes, setCurrentLikes] = useState(recipe.likes || 0);
   const [currentDislikes, setCurrentDislikes] = useState(recipe.dislikes || 0);
   const [totalVotes, setTotalVotes] = useState(recipe.votes || 0);
+  const [isSaved, setIsSaved] = useState(recipe.isSaved || false);
 
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -60,6 +64,7 @@ export default function RecipeCardCompact({
   useEffect(() => {
     if (status === "unauthenticated") {
       setCurrentUserVote(null);
+      setIsSaved(false);
     }
   }, [status]);
 
@@ -71,8 +76,21 @@ export default function RecipeCardCompact({
         storeVote(recipe.id, recipe.userVote);
         setCurrentUserVote(recipe.userVote);
       }
+
+      if (isAuthenticated) {
+        const isRecipeInStore = savedRecipes.some((r) => r.id === recipe.id);
+        setIsSaved(isRecipeInStore || recipe.isSaved || false);
+      }
     }
-  }, [recipe.id, recipe.userVote, votedRecipes, storeVote, isAuthenticated]);
+  }, [
+    recipe.id,
+    recipe.userVote,
+    recipe.isSaved,
+    votedRecipes,
+    savedRecipes,
+    storeVote,
+    isAuthenticated,
+  ]);
 
   const safeRecipe = {
     ...recipe,
@@ -145,6 +163,17 @@ export default function RecipeCardCompact({
   };
 
   const handleSave = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to save recipes", {
+        description: "Create an account or log in to save your preferences",
+        action: {
+          label: "Login",
+          onClick: () => (window.location.href = "/auth/login"),
+        },
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { data } = await saveRecipeMutation({
@@ -152,10 +181,20 @@ export default function RecipeCardCompact({
       });
 
       if (data?.saveRecipe?.success) {
-        storeRecipe(recipe);
+        const newIsSaved = !isSaved;
+        setIsSaved(newIsSaved);
+
+        if (newIsSaved) {
+          storeSaveRecipe(recipe);
+          toast.success("Recipe saved to your collection");
+        } else {
+          storeRemoveSavedRecipe(recipe.id);
+          toast.success("Recipe removed from your collection");
+        }
       }
     } catch (error) {
       console.error("Error saving recipe:", error);
+      toast.error("Failed to save recipe");
     } finally {
       setIsSaving(false);
     }
@@ -189,12 +228,14 @@ export default function RecipeCardCompact({
 
   const backgroundGradient = gradients[gradientIndex];
 
+  const isMyRecipesPage = from === "my-recipes";
+
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden h-[450px] flex flex-col ${className}`}
     >
       {/* Recipe Image or Gradient */}
-      <div className="relative h-36 overflow-hidden">
+      <div className="relative h-30 flex-shrink-0 overflow-hidden">
         {safeRecipe.image_url && !imageError ? (
           <Image
             src={safeRecipe.image_url}
@@ -220,7 +261,7 @@ export default function RecipeCardCompact({
       </div>
 
       <div className="p-4 flex-grow flex flex-col">
-        <h2 className="text-xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-fuchsia-500 to-rose-500 line-clamp-2">
+        <h2 className="text-xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-fuchsia-500 to-rose-500 line-clamp-1">
           {safeRecipe.title}
         </h2>
 
@@ -239,7 +280,8 @@ export default function RecipeCardCompact({
           </span>
         </div>
 
-        {safeRecipe.description && (
+        {/* Show description only if NOT on my-recipes page */}
+        {!isMyRecipesPage && safeRecipe.description && (
           <div className="mb-3 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400">
             <p className="text-slate-700 italic text-xs line-clamp-2">
               {truncatedDescription}
@@ -320,11 +362,19 @@ export default function RecipeCardCompact({
               size="sm"
               onClick={handleSave}
               isLoading={isSaving}
-              aria-label="Save Recipe"
-              className="bg-green-600 hover:bg-green-700 text-white"
+              aria-label={isSaved ? "Unsave Recipe" : "Save Recipe"}
+              className={
+                isSaved
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              }
             >
-              <Bookmark className="w-4 h-4 mr-1" />
-              Save
+              {isSaved ? (
+                <BookmarkCheck className="w-4 h-4 mr-1" />
+              ) : (
+                <Bookmark className="w-4 h-4 mr-1" />
+              )}
+              {isSaved ? "Saved" : "Save"}
             </Button>
           </div>
 

@@ -209,7 +209,7 @@ const typeDefs = `
       ingredients: [ID!]
     ): [Recipe!]!
     recipe(id: ID!): Recipe
-    myRecipes: [Recipe!]!
+    myRecipes(limit: Int, offset: Int): [Recipe!]!
     recipeVotes(recipeId: ID!): RecipeVotes!
     savedRecipes: [Recipe!]!
     me: User
@@ -234,6 +234,7 @@ const typeDefs = `
     saveRecipe(recipeId: ID!): SaveRecipeResult!
     deleteRecipe(id: ID!): AuthResult!
     updateRecipe(id: ID!, recipe: RecipeInput!): Recipe!
+    updateRecipeIngredients(recipeId: ID!, ingredients: [RecipeIngredientInput!]!): Recipe!
     forgotPassword(email: String!): AuthResult!
     resetPassword(token: String!, password: String!): AuthResult!
     updateProfile(name: String, image_url: String): User!
@@ -403,14 +404,17 @@ const resolvers = {
     recipe: async (_: unknown, { id }: { id: string }) => {
       return await getRecipeById(id);
     },
-    myRecipes: async () => {
+    myRecipes: async (
+      _: unknown,
+      { limit, offset }: { limit?: number; offset?: number }
+    ) => {
       const user = await getUserFromSession();
 
       if (!user) {
         return [];
       }
 
-      return await getRecipesByUserId(user.id);
+      return await getRecipesByUserId(user.id, limit, offset);
     },
     recipeVotes: async (_: unknown, { recipeId }: { recipeId: string }) => {
       try {
@@ -1133,6 +1137,68 @@ const resolvers = {
         return updatedRecipe;
       } catch (error) {
         console.error("Error updating recipe:", error);
+        throw error;
+      }
+    },
+    updateRecipeIngredients: async (
+      _: unknown,
+      {
+        recipeId,
+        ingredients,
+      }: { recipeId: string; ingredients: RecipeIngredient[] }
+    ) => {
+      try {
+        const user = await getUserFromSession();
+        if (!user) {
+          throw new Error("Authentication required to update recipes");
+        }
+
+        const recipe = await prisma.recipe.findUnique({
+          where: { id: recipeId },
+          include: {
+            ingredients: true,
+          },
+        });
+
+        if (!recipe) {
+          throw new Error(`Recipe with ID ${recipeId} not found`);
+        }
+
+        if (recipe.userId !== user.id) {
+          throw new Error("You don't have permission to update this recipe");
+        }
+
+        await prisma.recipeIngredient.deleteMany({
+          where: { recipeId },
+        });
+
+        const recipeIngredientsData = ingredients.map((ing) => ({
+          id: crypto.randomUUID(),
+          recipeId,
+          ingredientId: ing.ingredient_id,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          notes: ing.notes,
+        }));
+
+        await prisma.recipeIngredient.createMany({
+          data: recipeIngredientsData,
+        });
+
+        const updatedRecipe = await prisma.recipe.findUnique({
+          where: { id: recipeId },
+          include: {
+            ingredients: {
+              include: {
+                ingredient: true,
+              },
+            },
+          },
+        });
+
+        return updatedRecipe;
+      } catch (error) {
+        console.error("Error updating recipe ingredients:", error);
         throw error;
       }
     },

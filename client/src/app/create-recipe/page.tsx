@@ -38,6 +38,8 @@ export default function CreateRecipePage() {
     Record<string, { x: number; y: number; width: number; height: number }>
   >({});
   const [flyingComplete, setFlyingComplete] = useState(false);
+  const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
+  const [animationComplete, setAnimationComplete] = useState(false);
   const wheelRef = useRef<HTMLDivElement>(null);
 
   const [generateRecipeMutation] = useMutation(GENERATE_RECIPE);
@@ -56,6 +58,23 @@ export default function CreateRecipePage() {
       }
     };
   }, []);
+
+  // Effect to display the recipe once animation completes and recipe is generated
+  useEffect(() => {
+    if (animationComplete && generatedRecipe) {
+      console.log(
+        "Animation completed and recipe generated - showing final recipe"
+      );
+      // Добавляем задержку, чтобы пользователь мог увидеть финальное состояние котелка
+      const delayTimer = setTimeout(() => {
+        showFinalRecipe(generatedRecipe);
+      }, 3000); // Показываем готовый рецепт через 3 секунды после завершения анимации
+
+      return () => {
+        clearTimeout(delayTimer);
+      };
+    }
+  }, [animationComplete, generatedRecipe]);
 
   const generateUuid = () => {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -202,15 +221,27 @@ export default function CreateRecipePage() {
     });
     setIngredientPositions(positions);
 
+    // Reset states
     setIsGenerating(true);
     setAnimatingIngredients([...selectedIngredients]);
+    setGeneratedRecipe(null);
+    setAnimationComplete(false);
 
+    // Start the animation flow
     setTimeout(() => {
+      console.log("Starting wheel animation - setting flyingComplete to true");
       setFlyingComplete(true);
       setShowGenerationAnimation(true);
 
+      // Generate recipe but don't show it until animation completes
       generateRecipe();
     }, 1000);
+  };
+
+  const handleAnimationComplete = () => {
+    // This will be called when the RouletteWheel animation finishes
+    console.log("Animation complete callback received");
+    setAnimationComplete(true);
   };
 
   const generateRecipe = async () => {
@@ -256,14 +287,8 @@ export default function CreateRecipePage() {
       recipe = createFallbackRecipe();
     }
 
-    const minimumAnimationTime = 7000;
-    const animationStartTime = Date.now() - 1000;
-    const elapsedTime = Date.now() - animationStartTime;
-    const remainingTime = Math.max(0, minimumAnimationTime - elapsedTime);
-
-    setTimeout(() => {
-      showFinalRecipe(recipe!);
-    }, remainingTime);
+    // Store the generated recipe, but don't show it until animation completes
+    setGeneratedRecipe(recipe);
   };
 
   const showFinalRecipe = (recipeData: Recipe) => {
@@ -287,8 +312,11 @@ export default function CreateRecipePage() {
   };
 
   const handleGenerateNewRecipe = () => {
+    console.log("Generating new recipe - resetting states");
     setCurrentRecipe(null);
     setFlyingComplete(false);
+    setAnimationComplete(false);
+    setGeneratedRecipe(null);
   };
 
   // Функция обработки сгенерированного изображения
@@ -453,7 +481,7 @@ export default function CreateRecipePage() {
                 </h3>
                 <RouletteWheel
                   isSpinning={flyingComplete}
-                  onComplete={() => {}}
+                  onComplete={handleAnimationComplete}
                   selectedIngredients={selectedIngredients}
                 />
               </div>

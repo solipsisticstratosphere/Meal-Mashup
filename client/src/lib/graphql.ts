@@ -31,6 +31,7 @@ export const GET_POPULAR_RECIPES = gql`
     ) {
       id
       title
+      description
       image_url
       ingredients {
         ingredient {
@@ -52,7 +53,6 @@ export const GET_POPULAR_RECIPES = gql`
       userVote
       isSaved
       rating
-      description
     }
   }
 `;
@@ -62,6 +62,7 @@ export const GET_RECIPE = gql`
     recipe(id: $id) {
       id
       title
+      description
       ingredients {
         ingredient {
           id
@@ -88,10 +89,11 @@ export const GET_RECIPE = gql`
 `;
 
 export const GET_MY_RECIPES = gql`
-  query GetMyRecipes {
-    myRecipes {
+  query GetMyRecipes($limit: Int, $offset: Int) {
+    myRecipes(limit: $limit, offset: $offset) {
       id
       title
+      description
       image_url
       ingredients {
         ingredient {
@@ -122,7 +124,7 @@ export const GENERATE_RECIPE = gql`
     generateRecipe(ingredients: $ingredients) {
       id
       title
-
+      description
       ingredients {
         ingredient {
           id
@@ -298,11 +300,33 @@ export const GET_RECIPE_VOTES = gql`
   }
 `;
 
+export const UPDATE_RECIPE_INGREDIENTS = gql`
+  mutation UpdateRecipeIngredients(
+    $recipeId: ID!
+    $ingredients: [RecipeIngredientInput!]!
+  ) {
+    updateRecipeIngredients(recipeId: $recipeId, ingredients: $ingredients) {
+      id
+      ingredients {
+        ingredient {
+          id
+          name
+          image_url
+          category
+          unit_of_measure
+        }
+        quantity
+      }
+    }
+  }
+`;
+
 export const GET_SAVED_RECIPES = gql`
   query GetSavedRecipes {
     savedRecipes {
       id
       title
+      description
       image_url
       ingredients {
         ingredient {

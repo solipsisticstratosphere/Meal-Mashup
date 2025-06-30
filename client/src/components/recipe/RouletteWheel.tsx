@@ -20,6 +20,7 @@ export default function RouletteWheel({
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [isComplete, setIsComplete] = useState(false);
   const [animationFinished, setAnimationFinished] = useState(false);
+  const [ingredientsProcessed, setIngredientsProcessed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const colorIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -93,17 +94,52 @@ export default function RouletteWheel({
   }, []);
 
   useEffect(() => {
+    let safetyTimeout: NodeJS.Timeout | null = null;
+
+    if (isSpinning && !animationFinished) {
+      console.log("Setting up safety timeout for animation");
+
+      safetyTimeout = setTimeout(() => {
+        console.log("Safety timeout triggered - forcing animation completion");
+        if (!animationFinished) {
+          setIngredientsProcessed(true);
+          completeAnimation();
+        }
+      }, 20000);
+    }
+
+    return () => {
+      if (safetyTimeout) {
+        clearTimeout(safetyTimeout);
+      }
+    };
+  }, [isSpinning, animationFinished]);
+
+  useEffect(() => {
     if (!isSpinning && isCookingInternally) {
-      completeAnimation();
+      if (ingredientsProcessed) {
+        completeAnimation();
+      }
     } else if (isSpinning && !isCookingInternally && !animationFinished) {
       startAnimation();
+      setIngredientsProcessed(false);
     }
-  }, [isSpinning, isCookingInternally, animationFinished]);
+  }, [
+    isSpinning,
+    isCookingInternally,
+    animationFinished,
+    ingredientsProcessed,
+  ]);
 
   const startAnimation = () => {
+    console.log(
+      "Starting animation with ingredients:",
+      selectedIngredients.length
+    );
     setIsCookingInternally(true);
     setIsComplete(false);
     setAnimationFinished(false);
+    setIngredientsProcessed(false);
 
     const categoriesToShow =
       uniqueCategories.length > 0
@@ -117,6 +153,12 @@ export default function RouletteWheel({
             "Spices",
           ] as IngredientCategory[]);
 
+    console.log(
+      "Categories to show:",
+      categoriesToShow.length,
+      categoriesToShow
+    );
+
     const categoryCounts: Record<string, number> = {};
     selectedIngredients.forEach((ing) => {
       if (ing.category) {
@@ -124,27 +166,61 @@ export default function RouletteWheel({
       }
     });
 
-    const totalAnimationTime = Math.min(
-      8000,
-      2000 + selectedIngredients.length * 800
+    const baseTimePerCategory = 1500;
+    const totalCategories = categoriesToShow.length;
+
+    const totalAnimationTime = Math.max(
+      7000,
+      baseTimePerCategory * totalCategories + 3000
     );
+
+    console.log("Total animation time:", totalAnimationTime);
+
     const baseDisplayTime = 1200;
 
     let categoryIndex = 0;
     let animationEndTimer: NodeJS.Timeout | null = null;
 
+    const forcedCompletionTime = totalAnimationTime + 1000;
+    animationEndTimer = setTimeout(() => {
+      console.log("Forced completion timer fired");
+      setIngredientsProcessed(true);
+      completeAnimation();
+    }, forcedCompletionTime);
+
+    colorIntervalRef.current = animationEndTimer as unknown as NodeJS.Timeout;
+
     const showNextCategory = () => {
       if (categoryIndex >= categoriesToShow.length) {
+        console.log(
+          "All categories processed:",
+          categoryIndex,
+          "of",
+          categoriesToShow.length
+        );
         if (animationTimerRef.current) {
           clearTimeout(animationTimerRef.current);
         }
+
+        setIngredientsProcessed(true);
+        console.log("Ingredients marked as processed, scheduling completion");
+
         animationTimerRef.current = setTimeout(() => {
+          console.log("Delayed completion timer fired");
           completeAnimation();
-        }, 1000);
+        }, 1500);
         return;
       }
 
       const category = categoriesToShow[categoryIndex];
+      console.log(
+        "Processing category:",
+        category,
+        categoryIndex + 1,
+        "of",
+        categoriesToShow.length
+      );
+
       const ingredient = displayIngredients.find(
         (ing) => ing.name === category
       ) || {
@@ -164,18 +240,18 @@ export default function RouletteWheel({
     };
 
     showNextCategory();
-
-    animationEndTimer = setTimeout(() => {
-      completeAnimation();
-    }, totalAnimationTime);
-
-    colorIntervalRef.current = animationEndTimer as unknown as NodeJS.Timeout;
   };
 
   const completeAnimation = () => {
+    console.log("Executing completeAnimation function");
     if (colorIntervalRef.current) {
       clearInterval(colorIntervalRef.current);
       colorIntervalRef.current = null;
+    }
+
+    if (animationTimerRef.current) {
+      clearTimeout(animationTimerRef.current);
+      animationTimerRef.current = null;
     }
 
     setIsCookingInternally(false);
@@ -184,7 +260,13 @@ export default function RouletteWheel({
     setAnimationFinished(true);
 
     if (onComplete) {
-      onComplete();
+      console.log("Calling onComplete callback with delay");
+
+      setTimeout(() => {
+        onComplete();
+      }, 500);
+    } else {
+      console.log("No onComplete callback provided");
     }
   };
 
@@ -385,17 +467,18 @@ export default function RouletteWheel({
                   }
                 : isComplete
                   ? {
-                      rx: [52, 53, 52],
-                      ry: [35, 36, 35],
+                      rx: [52, 56, 54, 52, 56, 54, 52],
+                      ry: [35, 38, 37, 35, 38, 37, 35],
+                      opacity: [0.8, 1, 0.9, 0.8, 1, 0.9, 0.8],
                     }
                   : {}
             }
             transition={{
-              duration: isComplete ? 4 : 2.5,
+              duration: isComplete ? 3 : 2.5,
               repeat: isCookingInternally
                 ? Number.POSITIVE_INFINITY
                 : isComplete
-                  ? Number.POSITIVE_INFINITY
+                  ? 2 // Ограничиваем количество повторений для финальной анимации
                   : 0,
               ease: "easeInOut",
             }}
@@ -466,7 +549,6 @@ export default function RouletteWheel({
                   }}
                 />
 
-                {/* Individual steam paths - staggered for more natural look */}
                 {Array.from({ length: isComplete ? 6 : 4 }).map((_, i) => {
                   const offset = isComplete ? 25 : 20;
                   const baseX =
@@ -588,18 +670,18 @@ export default function RouletteWheel({
             <motion.text
               x="100"
               y="190"
-              fontSize="12"
-              fontWeight="600"
+              fontSize="14"
+              fontWeight="700"
               fill="#FFD700"
               textAnchor="middle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: [0, 1], scale: [0.8, 1.1, 1] }}
               transition={{
-                duration: 0.5,
-                ease: "easeInOut",
+                duration: 0.8,
+                ease: "easeOut",
               }}
             >
-              Ready!
+              Recipe Ready!
             </motion.text>
           )}
         </motion.svg>
@@ -626,14 +708,17 @@ export default function RouletteWheel({
       <AnimatePresence>
         {isComplete && !isCookingInternally && (
           <motion.div
-            className="mt-4 px-4 py-2 bg-amber-500/80 rounded-full backdrop-blur-sm"
+            className="mt-5 px-5 py-3 bg-amber-500/90 rounded-xl text-center backdrop-blur-sm flex flex-col items-center space-y-2"
             initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: 0, scale: [0.95, 1.05, 1] }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
           >
-            <span className="text-white font-medium text-base">
-              Recipe is ready!
+            <span className="text-white font-medium text-lg">
+              Your Recipe is Ready!
+            </span>
+            <span className="text-white/90 text-sm">
+              Showing your recipe in a moment...
             </span>
           </motion.div>
         )}

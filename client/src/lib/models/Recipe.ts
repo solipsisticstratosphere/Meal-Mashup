@@ -185,9 +185,23 @@ export async function getRecipesByDifficulty(
   );
 }
 
-export async function getRecipesByUserId(userId: string): Promise<Recipe[]> {
-  return await query<Recipe>(
-    "SELECT * FROM recipes WHERE user_id = $1 ORDER BY created_at DESC",
-    [userId]
-  );
+export async function getRecipesByUserId(
+  userId: string,
+  limit?: number,
+  offset?: number
+): Promise<Recipe[]> {
+  let sql = "SELECT * FROM recipes WHERE user_id = $1 ORDER BY created_at DESC";
+  const params: (string | number)[] = [userId];
+
+  if (limit !== undefined) {
+    sql += " LIMIT $2";
+    params.push(limit);
+
+    if (offset !== undefined) {
+      sql += " OFFSET $3";
+      params.push(offset);
+    }
+  }
+
+  return await query<Recipe>(sql, params);
 }

@@ -3,12 +3,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@apollo/client";
-import { GET_RECIPE, UPDATE_RECIPE, GET_INGREDIENTS } from "@/lib/graphql";
+import {
+  GET_RECIPE,
+  UPDATE_RECIPE,
+  UPDATE_RECIPE_INGREDIENTS,
+} from "@/lib/graphql";
 import Button from "@/components/ui/Button";
-import { Recipe, RecipeIngredient, Ingredient } from "@/lib/types";
+import { Recipe, RecipeIngredient } from "@/lib/types";
 import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
+import IngredientManager from "@/components/recipe/IngredientManager";
 
 interface EditableRecipe {
   title: string;
@@ -42,10 +47,6 @@ export default function EditRecipePage() {
     ingredients: [],
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedIngredient, setSelectedIngredient] =
-    useState<Ingredient | null>(null);
-  const [ingredientQuantity, setIngredientQuantity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: recipeData, loading: recipeLoading } = useQuery(GET_RECIPE, {
@@ -53,12 +54,8 @@ export default function EditRecipePage() {
     skip: !recipeId,
   });
 
-  const { data: ingredientsData } = useQuery(GET_INGREDIENTS, {
-    variables: { search: searchTerm },
-    skip: !searchTerm,
-  });
-
   const [updateRecipe] = useMutation(UPDATE_RECIPE);
+  const [updateRecipeIngredients] = useMutation(UPDATE_RECIPE_INGREDIENTS);
 
   useEffect(() => {
     if (recipeData?.recipe) {
@@ -103,46 +100,19 @@ export default function EditRecipePage() {
     }));
   };
 
-  const handleAddIngredient = () => {
-    if (!selectedIngredient || !ingredientQuantity) {
-      toast.error("Please select an ingredient and specify quantity");
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      ingredients: [
-        ...prev.ingredients,
-        {
-          ingredientId: selectedIngredient.id,
-          quantity: ingredientQuantity,
-          ingredient: {
-            id: selectedIngredient.id,
-            name: selectedIngredient.name,
-            unit_of_measure: selectedIngredient.unit_of_measure || "",
-          },
-        },
-      ],
-    }));
-
-    setSelectedIngredient(null);
-    setIngredientQuantity("");
-    setSearchTerm("");
+  const handleIngredientChange = (
+    ingredients: EditableRecipe["ingredients"]
+  ) => {
+    setFormData((prev) => ({ ...prev, ingredients }));
   };
-
-  // const handleRemoveIngredient = (id: string) => {
-  //   setFormData((prev) => ({
-  //     ...prev,
-  //     ingredients: prev.ingredients.filter((item) => item.ingredientId !== id),
-  //   }));
-  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const { data } = await updateRecipe({
+      // Update recipe details
+      const { data: recipeData } = await updateRecipe({
         variables: {
           id: recipeId,
           recipe: {
@@ -155,8 +125,38 @@ export default function EditRecipePage() {
         },
       });
 
-      if (data?.updateRecipe?.id) {
-        toast.success("Recipe updated successfully!");
+      let ingredientsUpdated = true;
+
+      // Update recipe ingredients if there are any
+      if (formData.ingredients.length > 0) {
+        try {
+          const ingredientData = formData.ingredients.map((item) => ({
+            ingredient_id: item.ingredientId,
+            quantity: parseFloat(item.quantity) || 1,
+            unit: item.ingredient.unit_of_measure || "unit",
+            notes: item.quantity,
+          }));
+
+          await updateRecipeIngredients({
+            variables: {
+              recipeId: recipeId,
+              ingredients: ingredientData,
+            },
+          });
+        } catch (ingredientError) {
+          console.error("Error updating ingredients:", ingredientError);
+          ingredientsUpdated = false;
+        }
+      }
+
+      if (recipeData?.updateRecipe?.id) {
+        if (ingredientsUpdated) {
+          toast.success("Recipe and ingredients updated successfully!");
+        } else {
+          toast.success(
+            "Recipe details updated, but there was an issue with ingredients."
+          );
+        }
         router.push(`/recipes/${recipeId}`);
       } else {
         toast.error("Failed to update recipe");
@@ -274,113 +274,10 @@ export default function EditRecipePage() {
             />
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Ingredients
-            </h3>
-
-            <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="ingredientSearch"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Search for ingredient
-                  </label>
-                  <input
-                    type="text"
-                    id="ingredientSearch"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    placeholder="Search ingredients..."
-                  />
-
-                  {searchTerm && ingredientsData?.ingredients && (
-                    <div className="mt-1 p-2 bg-white border border-gray-300 rounded-xl shadow-sm max-h-40 overflow-y-auto">
-                      {ingredientsData.ingredients.map(
-                        (ingredient: Ingredient) => (
-                          <div
-                            key={ingredient.id}
-                            className="p-2 hover:bg-gray-100 cursor-pointer rounded-lg"
-                            onClick={() => {
-                              setSelectedIngredient(ingredient);
-                              setSearchTerm(ingredient.name);
-                            }}
-                          >
-                            {ingredient.name}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="quantity"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Quantity
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      id="quantity"
-                      value={ingredientQuantity}
-                      onChange={(e) => setIngredientQuantity(e.target.value)}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-l-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="e.g. 100g"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddIngredient}
-                      className="px-4 py-3 bg-amber-500 text-white rounded-r-xl hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
-                Ingredients
-              </h4>
-              {formData.ingredients.length === 0 ? (
-                <p className="text-gray-500 italic">No ingredients added yet</p>
-              ) : (
-                <ul className="divide-y divide-gray-200">
-                  {formData.ingredients.map((item) => (
-                    <li
-                      key={item.ingredientId}
-                      className="py-3 flex justify-between items-center"
-                    >
-                      <div>
-                        <span className="font-medium">
-                          {item.ingredient.name}
-                        </span>
-                        <span className="ml-2 text-gray-600">
-                          ({item.quantity} {item.ingredient.unit_of_measure})
-                        </span>
-                      </div>
-                      {/* <button
-                        type="button"
-                        onClick={() =>
-                          handleRemoveIngredient(item.ingredientId)
-                        }
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button> */}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <IngredientManager
+            ingredients={formData.ingredients}
+            onChange={handleIngredientChange}
+          />
         </div>
 
         <div className="flex justify-end mt-8 space-x-4">

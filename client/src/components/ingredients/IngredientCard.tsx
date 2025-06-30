@@ -5,9 +5,10 @@ import Image from "next/image";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { twMerge } from "tailwind-merge";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon } from "lucide-react";
+import { useIsMobile } from "@/hooks/useMobile";
 
 interface IngredientCardProps {
   ingredient: Ingredient;
@@ -28,6 +29,8 @@ export default function IngredientCard({
 }: IngredientCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const isMobile = useIsMobile();
 
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -35,6 +38,26 @@ export default function IngredientCard({
       data: { ingredient },
       disabled: dragDisabled,
     });
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleClickOutside = (event: Event) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
+        setShowTooltip(false);
+      }
+    };
+
+    if (showTooltip) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showTooltip, isMobile]);
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -74,9 +97,34 @@ export default function IngredientCard({
     setImageError(true);
   };
 
+  const handleMouseEnter = () => {
+    if (!isMobile) {
+      setShowTooltip(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      setShowTooltip(false);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isMobile) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShowTooltip(!showTooltip);
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        cardRef.current = node;
+      }}
       style={style}
       {...attributes}
       {...(dragDisabled ? {} : listeners)}
@@ -86,12 +134,12 @@ export default function IngredientCard({
         isDragging && "z-10",
         className
       )}
-      onClick={onClick}
+      onClick={isMobile ? handleCardClick : onClick}
       id={id}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onFocus={() => setShowTooltip(true)}
-      onBlur={() => setShowTooltip(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={handleMouseLeave}
       aria-describedby={`tooltip-${ingredient.id}`}
     >
       <div className="relative h-28 w-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -148,6 +196,32 @@ export default function IngredientCard({
         </div>
       )}
 
+      {/* Индикатор информации для мобильных устройств */}
+      {isMobile && !isDragging && (
+        <div
+          className="absolute right-2 bottom-2 bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTooltip(!showTooltip);
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="white"
+            className="w-3 h-3"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+            />
+          </svg>
+        </div>
+      )}
+
       <AnimatePresence>
         {showTooltip && !isDragging && (
           <motion.div
@@ -156,8 +230,7 @@ export default function IngredientCard({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className={`absolute z-50 ${isMobile ? "" : "pointer-events-none"} left-1/2 -translate-x-1/2 ${isMobile ? "top-full mt-2" : "bottom-full mb-2"} w-64 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden`}
           >
             <div className="relative h-40 w-full bg-gradient-to-br from-gray-100 to-gray-200">
               {!imageError && ingredient.image_url ? (
@@ -194,7 +267,35 @@ export default function IngredientCard({
                 </span>
               </div>
             </div>
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-3 h-3 bg-white border-r border-b border-gray-100"></div>
+            <div
+              className={`absolute ${isMobile ? "top-0" : "bottom-0"} left-1/2 -translate-x-1/2 ${isMobile ? "-translate-y-1/2" : "translate-y-1/2"} rotate-45 w-3 h-3 bg-white border-${isMobile ? "l border-t" : "r border-b"} border-gray-100`}
+            ></div>
+
+            {isMobile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTooltip(false);
+                }}
+                className="absolute top-2 right-2 bg-gray-200 rounded-full p-1"
+                aria-label="Close details"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
