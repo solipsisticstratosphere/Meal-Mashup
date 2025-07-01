@@ -53,6 +53,7 @@ export const GET_POPULAR_RECIPES = gql`
       userVote
       isSaved
       rating
+      user_id
     }
   }
 `;
@@ -116,6 +117,7 @@ export const GET_MY_RECIPES = gql`
       userVote
       isSaved
       rating
+      user_id
     }
   }
 `;
@@ -147,6 +149,7 @@ export const GENERATE_RECIPE = gql`
       userVote
       isSaved
       rating
+      user_id
     }
   }
 `;
@@ -349,6 +352,16 @@ export const GET_SAVED_RECIPES = gql`
       userVote
       isSaved
       rating
+    }
+  }
+`;
+
+export const GET_USER_BY_ID = gql`
+  query GetUserById($userId: ID!) {
+    user(id: $userId) {
+      id
+      name
+      image_url
     }
   }
 `;

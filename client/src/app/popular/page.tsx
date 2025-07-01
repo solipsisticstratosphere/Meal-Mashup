@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@apollo/client";
-import { GET_POPULAR_RECIPES } from "@/lib/graphql";
+import { GET_POPULAR_RECIPES, GET_USER_BY_ID } from "@/lib/graphql";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { memo, useMemo, useCallback } from "react";
@@ -355,6 +355,45 @@ export default function PopularRecipesPage() {
       onCompleted: (data) => {
         if (!data?.popularRecipes) return;
         setHasMore(data.popularRecipes.length >= RECIPES_PER_PAGE);
+
+       
+        if (data.popularRecipes.length > 0) {
+         
+          const apolloClient =
+            typeof window !== "undefined"
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).__APOLLO_CLIENT__
+              : null;
+
+         
+          const userIdSet = new Set<string>();
+
+          data.popularRecipes.forEach((recipe: Recipe) => {
+            if (recipe.user_id) {
+              userIdSet.add(recipe.user_id);
+            }
+          });
+
+         
+          const userIds = Array.from(userIdSet);
+
+         
+          if (apolloClient) {
+            userIds.forEach((userId: string) => {
+              if (userId) {
+                apolloClient
+                  .query({
+                    query: GET_USER_BY_ID,
+                    variables: { userId },
+                    fetchPolicy: "cache-first",
+                  })
+                  .catch((err: Error) => {
+                    console.warn("Error pre-fetching user data:", err);
+                  });
+              }
+            });
+          }
+        }
       },
     }
   );
@@ -841,6 +880,7 @@ export default function PopularRecipesPage() {
                       isSaved={recipe.isSaved}
                       recipeRating={recipe.rating}
                       description={recipe.description}
+                      user_id={recipe.user_id}
                     />
                   </motion.div>
                 ))}

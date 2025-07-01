@@ -9,11 +9,13 @@ import { Menu, X, Utensils, UserCircle, LogOut, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "./Button";
 import { useAuth } from "@/components/providers/AuthProvider";
+import Image from "next/image";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [avatarError, setAvatarError] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -93,6 +95,32 @@ const Header = () => {
     },
   };
 
+  const renderAvatar = (size: "small" | "large") => {
+    if (avatarError || !user?.image) {
+      return (
+        <div
+          className={`w-full h-full bg-rose-100 flex items-center justify-center`}
+        >
+          <User
+            className={size === "small" ? "w-4 h-4" : "w-5 h-5"}
+            color="#f43f5e"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <Image
+        src={user.image}
+        alt={user.name || "User avatar"}
+        fill
+        sizes={size === "small" ? "24px" : "28px"}
+        className="object-cover"
+        onError={() => setAvatarError(true)}
+      />
+    );
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
       <div className="container mx-auto px-4 lg:px-6 flex justify-between items-center h-16 lg:h-18 gap-4">
@@ -165,12 +193,11 @@ const Header = () => {
               <div className="h-9 w-20 bg-slate-100 animate-pulse rounded-lg"></div>
             ) : isAuthenticated ? (
               <>
-                <Link href="/profile">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<User className="w-4 h-4" />}
-                  >
+                <Link href="/profile" className="flex items-center gap-2">
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-pink-100 shrink-0">
+                    {renderAvatar("small")}
+                  </div>
+                  <Button variant="ghost" size="sm" className="ml-1">
                     <span className="hidden lg:inline">
                       {user?.name?.split(" ")[0] || "Profile"}
                     </span>
@@ -311,8 +338,11 @@ const Header = () => {
                           <Button
                             variant="outline"
                             fullWidth
-                            icon={<User className="w-4 h-4" />}
+                            className="justify-start"
                           >
+                            <div className="relative w-6 h-6 rounded-full overflow-hidden mr-2">
+                              {renderAvatar("small")}
+                            </div>
                             Profile
                           </Button>
                         </Link>

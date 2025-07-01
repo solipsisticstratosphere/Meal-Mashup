@@ -27,6 +27,7 @@ interface FoodCardProps {
   showSaveButton?: boolean;
   recipeRating?: number | null;
   description?: string;
+  user_id?: string;
 }
 
 export function FoodCard({
@@ -46,6 +47,7 @@ export function FoodCard({
   showSaveButton = true,
   recipeRating,
   description,
+  // user_id,
 }: FoodCardProps) {
   const [imageError, setImageError] = useState(false);
   const [currentUserVote, setCurrentUserVote] = useState(userVote);
@@ -53,6 +55,10 @@ export function FoodCard({
   const [currentDislikes, setCurrentDislikes] = useState(dislikes);
   const [isRecipeSaved, setIsRecipeSaved] = useState(isSaved);
   const [isSaving, setIsSaving] = useState(false);
+  // const [authorInfo, setAuthorInfo] = useState<{
+  //   name?: string;
+  //   image_url?: string;
+  // } | null>(null);
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
   const href = from ? `/recipes/${id}?from=${from}` : `/recipes/${id}`;
@@ -71,6 +77,28 @@ export function FoodCard({
   } = useRecipeStore();
   const [voteRecipeMutation] = useMutation(VOTE_RECIPE);
   const [saveRecipeMutation] = useMutation(SAVE_RECIPE);
+
+  // const { data: authorData, loading: authorLoading } = useQuery(
+  //   GET_USER_BY_ID,
+  //   {
+  //     variables: { userId: user_id },
+  //     skip: !user_id,
+  //     fetchPolicy: "cache-and-network",
+  //     nextFetchPolicy: "cache-first",
+  //     notifyOnNetworkStatusChange: true,
+  //     onError: (error) => {
+  //       console.error("Error fetching author info:", error);
+  //     },
+  //   }
+  // );
+
+  // const author = authorData?.user;
+
+  // useEffect(() => {
+  //   if (author) {
+  //     setAuthorInfo(author);
+  //   }
+  // }, [author]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -361,6 +389,40 @@ export function FoodCard({
               )}
             </div>
           </div>
+
+          {/* Author info */}
+          {/* {user_id && (
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center">
+              <div className="relative w-5 h-5 rounded-full overflow-hidden mr-2 border border-gray-200">
+                {authorLoading ? (
+                  <div className="w-full h-full bg-gray-100 animate-pulse"></div>
+                ) : authorInfo?.image_url ? (
+                  <Image
+                    src={authorInfo.image_url}
+                    alt={authorInfo.name || "Recipe author"}
+                    fill
+                    sizes="20px"
+                    className="object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                    <User className="w-3 h-3 text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <span className="text-xs text-gray-500 truncate max-w-[150px]">
+                {authorLoading ? (
+                  <div className="w-16 h-3 bg-gray-100 rounded animate-pulse"></div>
+                ) : (
+                  authorInfo?.name || author?.name || "Unknown Chef"
+                )}
+              </span>
+            </div>
+          )} */}
         </div>
       </div>
     </div>

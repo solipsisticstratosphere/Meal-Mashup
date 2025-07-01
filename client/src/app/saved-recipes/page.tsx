@@ -134,38 +134,34 @@ export default function SavedRecipesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mt-8">
           <AnimatePresence>
-            {savedRecipes.map(
-              (recipe: Recipe & { isSaved?: boolean }, index: number) => (
-                <motion.div
-                  key={recipe.id}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="show"
-                  className="transform transition-all hover:scale-[1.02] hover:shadow-2xl"
-                  whileHover={{
-                    scale: 1.03,
-                    transition: { duration: 0.2 },
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <FoodCard
-                    id={recipe.id}
-                    title={recipe.title}
-                    image={recipe.image_url || ""}
-                    tags={recipe.tags || []}
-                    rating={recipe.votes || 0}
-                    featured={index === 0}
-                    from="saved"
-                    userVote={recipe.userVote}
-                    likes={recipe.likes || 0}
-                    dislikes={recipe.dislikes || 0}
-                    isSaved={
-                      recipe.isSaved === undefined ? true : recipe.isSaved
-                    }
-                  />
-                </motion.div>
-              )
-            )}
+            {savedRecipes.map((recipe: Recipe & { isSaved?: boolean }) => (
+              <motion.div
+                key={recipe.id}
+                variants={itemVariants}
+                initial="hidden"
+                animate="show"
+                className="transform transition-all"
+                whileHover={{
+                  scale: 1.03,
+                  transition: { duration: 0.1 },
+                }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <FoodCard
+                  id={recipe.id}
+                  title={recipe.title}
+                  image={recipe.image_url || ""}
+                  tags={recipe.tags || []}
+                  rating={recipe.votes || 0}
+                  from="saved"
+                  userVote={recipe.userVote}
+                  likes={recipe.likes || 0}
+                  dislikes={recipe.dislikes || 0}
+                  isSaved={recipe.isSaved === undefined ? true : recipe.isSaved}
+                  user_id={recipe.user_id}
+                />
+              </motion.div>
+            ))}
           </AnimatePresence>
         </div>
       )}

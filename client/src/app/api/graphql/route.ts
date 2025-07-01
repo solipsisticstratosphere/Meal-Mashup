@@ -213,6 +213,7 @@ const typeDefs = `
     recipeVotes(recipeId: ID!): RecipeVotes!
     savedRecipes: [Recipe!]!
     me: User
+    user(id: ID!): User
   }
 
   type SaveRecipeResult {
@@ -478,6 +479,9 @@ const resolvers = {
         return null;
       }
       return user;
+    },
+    user: async (_: unknown, { id }: { id: string }) => {
+      return await prisma.user.findUnique({ where: { id } });
     },
   },
   Recipe: {

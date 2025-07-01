@@ -4,12 +4,13 @@ import { Recipe, VoteType, RecipeIngredient } from "@/lib/types";
 import React from "react";
 import Button from "@/components/ui/Button";
 import { useRecipeStore } from "@/store/recipeStore";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   VOTE_RECIPE,
   SAVE_RECIPE,
   DELETE_RECIPE,
   GET_MY_RECIPES,
+  GET_USER_BY_ID,
 } from "@/lib/graphql";
 import { useState, useEffect } from "react";
 import {
@@ -22,6 +23,7 @@ import {
   Share2,
   X,
   Utensils,
+  User,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -35,6 +37,7 @@ import {
 } from "@react-pdf/renderer";
 import { usePathname, useRouter } from "next/navigation";
 import ImageModal from "@/components/ui/ImageModal";
+import Image from "next/image";
 
 const styles = StyleSheet.create({
   page: {
@@ -173,6 +176,23 @@ export default function RecipeCard({
   const [deleteRecipeMutation, { loading: deletingRecipe }] =
     useMutation(DELETE_RECIPE);
 
+  const [authorInfo, setAuthorInfo] = useState<{
+    name?: string;
+    image_url?: string;
+  } | null>(null);
+
+  const { data: authorData, loading: authorLoading } = useQuery(
+    GET_USER_BY_ID,
+    {
+      variables: { userId: recipe.user_id },
+      skip: !recipe.user_id,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first",
+    }
+  );
+
+  const author = authorData?.user;
+
   const router = useRouter();
   const pathname = usePathname();
 
@@ -270,6 +290,12 @@ export default function RecipeCard({
     }
   }, [isAuthenticated, recipe.id, recipe.isSaved]);
 
+  useEffect(() => {
+    if (author) {
+      setAuthorInfo(author);
+    }
+  }, [author]);
+
   const handleVote = async (vote: VoteType) => {
     if (!isAuthenticated) {
       toast.error("Please log in to vote for recipes", {
@@ -282,54 +308,62 @@ export default function RecipeCard({
       return;
     }
 
+    const oldVote = currentUserVote;
+    const oldLikes = currentLikes;
+    const oldDislikes = currentDislikes;
+
     try {
-      const voteToSend = currentUserVote === vote ? null : vote;
-      const oldVote = currentUserVote;
+      const isUnvote = currentUserVote === vote;
+      const voteToSend = isUnvote ? "UNVOTE" : vote.toUpperCase();
 
-      let newOptimisticLikes = currentLikes;
-      let newOptimisticDislikes = currentDislikes;
+      // Optimistic update
+      if (isUnvote) {
+        if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+        if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
+        setCurrentUserVote(null);
+      } else {
+        if (oldVote === "like") setCurrentLikes((prev) => prev - 1);
+        if (oldVote === "dislike") setCurrentDislikes((prev) => prev - 1);
 
-      if (oldVote === "like") newOptimisticLikes--;
-      if (oldVote === "dislike") newOptimisticDislikes--;
-      if (voteToSend === "like") newOptimisticLikes++;
-      if (voteToSend === "dislike") newOptimisticDislikes++;
+        if (vote === "like") setCurrentLikes((prev) => prev + 1);
+        if (vote === "dislike") setCurrentDislikes((prev) => prev + 1);
+        setCurrentUserVote(vote);
+      }
 
-      setCurrentLikes(newOptimisticLikes);
-      setCurrentDislikes(newOptimisticDislikes);
-      setCurrentUserVote(voteToSend);
-
-      storeVote(recipe.id, voteToSend as VoteType);
+      storeVote(recipe.id, isUnvote ? null : vote);
 
       const { data } = await voteRecipeMutation({
-        variables: { recipeId: recipe.id, vote: voteToSend },
+        variables: {
+          recipeId: recipe.id,
+          vote: voteToSend,
+        },
       });
 
       if (data?.voteRecipe) {
-        if (data.voteRecipe.userVote !== undefined) {
-          setCurrentUserVote(data.voteRecipe.userVote || null);
-          storeVote(recipe.id, data.voteRecipe.userVote);
+        const serverUserVote = data.voteRecipe.userVote;
+        const serverLikes = data.voteRecipe.likes;
+        const serverDislikes = data.voteRecipe.dislikes;
+
+        setCurrentUserVote(serverUserVote);
+        storeVote(recipe.id, serverUserVote);
+
+        if (serverLikes !== undefined) {
+          setCurrentLikes(serverLikes);
         }
 
-        if (data.voteRecipe.likes !== undefined) {
-          setCurrentLikes(data.voteRecipe.likes);
+        if (serverDislikes !== undefined) {
+          setCurrentDislikes(serverDislikes);
         }
-
-        if (data.voteRecipe.dislikes !== undefined) {
-          setCurrentDislikes(data.voteRecipe.dislikes);
-        }
-
-        toast.success(`${voteToSend ? "Vote recorded" : "Vote removed"}`);
-      } else {
-        toast.error("Failed to record your vote");
+        toast.success(`${!isUnvote ? "Vote recorded" : "Vote removed"}`);
       }
     } catch (error) {
       console.error("Error voting for recipe:", error);
       toast.error("Failed to record your vote");
 
-      setCurrentUserVote(votedRecipes[recipe.id] || recipe.userVote || null);
-      setCurrentLikes(recipe.likes || 0);
-      setCurrentDislikes(recipe.dislikes || 0);
-      storeVote(recipe.id, currentUserVote);
+      // Rollback on error
+      setCurrentUserVote(oldVote);
+      setCurrentLikes(oldLikes);
+      setCurrentDislikes(oldDislikes);
     }
   };
 
@@ -594,6 +628,39 @@ export default function RecipeCard({
             {totalVotesToDisplay} votes ({currentLikes} likes, {currentDislikes}{" "}
             dislikes)
           </span>
+
+          {recipe.user_id && (
+            <span className="flex items-center text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+              <div className="relative w-5 h-5 rounded-full overflow-hidden mr-2">
+                {authorLoading ? (
+                  <div className="w-full h-full bg-gray-100 animate-pulse"></div>
+                ) : authorInfo?.image_url ? (
+                  <Image
+                    src={authorInfo.image_url}
+                    alt={authorInfo.name || "Recipe author"}
+                    fill
+                    sizes="20px"
+                    className="object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                    <User className="w-3 h-3 text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <span className="truncate max-w-[100px]">
+                {authorLoading ? (
+                  <div className="w-16 h-3 bg-gray-100 rounded animate-pulse"></div>
+                ) : (
+                  authorInfo?.name || author?.name || "Unknown Chef"
+                )}
+              </span>
+            </span>
+          )}
         </div>
 
         {safeRecipe.description && (

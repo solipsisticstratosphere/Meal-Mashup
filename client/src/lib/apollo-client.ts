@@ -30,10 +30,29 @@ const cache = new InMemoryCache({
     Query: {
       fields: {
         popularRecipes: popularRecipesMerge,
+        user: {
+          keyArgs: ["id"],
+
+          merge(existing, incoming) {
+            return incoming;
+          },
+        },
       },
     },
     Recipe: {
       keyFields: ["id"],
+    },
+    User: {
+      keyFields: ["id"],
+
+      fields: {
+        name: {
+          merge: true,
+        },
+        image_url: {
+          merge: true,
+        },
+      },
     },
   },
 });
@@ -44,6 +63,7 @@ export const apolloClient = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first",
       notifyOnNetworkStatusChange: true,
     },
     query: {
