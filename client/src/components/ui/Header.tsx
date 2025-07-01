@@ -130,13 +130,13 @@ const Header = () => {
           aria-label="Meal Mashup Home"
         >
           <motion.div
-            className="bg-gradient-to-br from-rose-500 to-pink-600 w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-200"
+            className="sm:flex md:hidden lg:flex bg-gradient-to-br from-rose-500 to-pink-600 w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <Utensils className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
           </motion.div>
-          <span className="text-xl lg:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 tracking-tight">
+          <span className="text-xl lg:text-2xl md:text-center font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-pink-400 to-orange-400 tracking-tight">
             Meal Mashup
           </span>
         </Link>
