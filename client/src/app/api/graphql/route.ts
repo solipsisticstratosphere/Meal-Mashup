@@ -316,7 +316,6 @@ const resolvers = {
       }
 
       if (ingredients && ingredients.length > 0) {
-        // For each ingredient ID, add a condition that requires it to be present in the recipe
         ingredients.forEach((ingredientId) => {
           conditions.push({
             ingredients: {

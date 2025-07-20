@@ -11,8 +11,8 @@ export async function hashPassword(password: string): Promise<string> {
 
 /**
  *
- * @param password Проверяемый пароль
- * @param hashedPassword Хешированный пароль из базы данных
+ * @param password
+ * @param hashedPassword
  */
 export async function verifyPassword(
   password: string,

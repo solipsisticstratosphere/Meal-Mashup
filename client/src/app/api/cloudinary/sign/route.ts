@@ -24,7 +24,6 @@ async function getUserFromSession() {
 
 export async function POST(request: Request) {
   try {
-    // Check if user is authenticated
     const user = await getUserFromSession();
     if (!user) {
       return NextResponse.json(

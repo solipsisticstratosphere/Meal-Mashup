@@ -24,7 +24,6 @@ async function getUserFromSession() {
 
 export async function POST(request: Request) {
   try {
-    // Check if user is authenticated
     const user = await getUserFromSession();
     if (!user) {
       return NextResponse.json(
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Delete the image from Cloudinary
     const result = await cloudinary.uploader.destroy(publicId);
 
     if (result.result === "ok") {
